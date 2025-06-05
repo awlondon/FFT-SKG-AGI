@@ -1,0 +1,72 @@
+{
+    "react_to_audio": {
+      "question": "Do you want to react to this audio?",
+      "glyphs": "🜁🜂🜄",
+      "tokens": ["react", "to", "audio"]
+    },
+    "speak_this_thought": {
+      "question": "Should this thought be spoken?",
+      "glyphs": "🜂🜐🜞",
+      "tokens": ["speak", "this", "thought"]
+    },
+    "go_deep": {
+      "question": "Should you recursively walk this token?",
+      "glyphs": "🜃🜤🜞",
+      "tokens": ["go", "deep"]
+    },
+    "prioritize_output": {
+      "question": "Should this expression be externalized?",
+      "glyphs": "🜂🜯🜝",
+      "tokens": ["prioritize", "output"]
+    },
+    "refine_voice": {
+      "question": "Do you want to modify how you express this?",
+      "glyphs": "🜈🜓🜲",
+      "tokens": ["refine", "voice"]
+    },
+    "delay_response": {
+      "question": "Should you wait before responding?",
+      "glyphs": "🜬🜛🜨",
+      "tokens": ["delay", "response"]
+    },
+    "suppress_output": {
+      "question": "Should you keep this thought silent?",
+      "glyphs": "🜏🜙🜥",
+      "tokens": ["suppress", "output"]
+    },
+    "reconsider_meaning": {
+      "question": "Should you revise your understanding?",
+      "glyphs": "🜩🜰🜮",
+      "tokens": ["reconsider", "meaning"]
+    },
+    "react_to_input": {
+      "question": "Do you want to respond to this external input?",
+      "glyphs": "🜄🜁🜐",
+      "tokens": ["react", "to", "input"]
+    },
+    "decide_glyph": {
+      "question": "Should this token be bound to the current glyph?",
+      "glyphs": "🜡🜓🜧",
+      "tokens": ["decide", "glyph"]
+    },
+    "infer_modalities": {
+      "question": "Should you try to infer missing modalities?",
+      "glyphs": "🝓🝁🝃",
+      "tokens": ["infer", "modalities"]
+    },
+    "delay_inference": {
+      "question": "Should you delay inferring modalities right now?",
+      "glyphs": "🝀🜬🜨",
+      "tokens": ["delay", "inference"]
+    },
+    "question_self": {
+      "question": "Should you reflect before acting?",
+      "glyphs": "🜚🝇🝀",
+      "tokens": ["question", "self"]
+    },
+    "evaluate_fallback_glyph": {
+      "question": "Should you use a fallback glyph for this token?",
+      "glyphs": "🜔🜕🜖",
+      "tokens": ["evaluate", "fallback", "glyph"]
+    }
+  }
