@@ -67,4 +67,6 @@ token_data = {
 }
 
 # This would typically be triggered from agency gate decisions in the recursive process
-externalize_token(token_data["token"], token_data)
+
+if __name__ == "__main__":
+    externalize_token(token_data["token"], token_data)
