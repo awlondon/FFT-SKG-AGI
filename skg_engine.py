@@ -9,7 +9,7 @@ from skg_thought_tracker import SKGThoughtTracker
 
 
 class SKGEngine:
-    def __init__(self, memory_path: str, glyph_path: Optional[str] = None):
+    def __init__(self, memory_path: str, glyph_path: Optional[str] = "glossary/extended_glyph_pool.json"):
         """
         Initialize the SKG engine.
 
@@ -21,16 +21,14 @@ class SKGEngine:
             JSON file containing a list of glyphs to populate glyph_pool.
         """
         self.memory_path = memory_path
-        self.glyph_list_path = glyph_path or "glossary/extended_glyph_pool.json"
+        self.glyph_list_path = glyph_path
         self.token_map = {}
         self.adjacency_map = {}
         self.graph = SuperKnowledgeGraph()
         self.thought_tracker = SKGThoughtTracker()
 
-        # Load glyphs
+        # Load glyphs and state
         self._load_glyph_pool(self.glyph_list_path)
-
-        # Load saved state
         self._load_state()
 
         # Initialize logs
@@ -39,42 +37,6 @@ class SKGEngine:
         self.adj_log = os.path.join(self.log_dir, "adjacency_walk.log")
         self.weight_log = os.path.join(self.log_dir, "weight_updates.log")
 
-    def _state_path(self, name):
-        return os.path.join(self.memory_path, f"{name}.json")
-
-    def _load_state(self):
-        for attr in ("token_map", "adjacency_map"):
-            path = self._state_path(attr)
-            if os.path.exists(path):
-                try:
-                    with open(path, "r") as f:
-                        setattr(self, attr, json.load(f))
-                except Exception:
-                    setattr(self, attr, {})
-
-    def _load_glyph_pool(self, path):
-        try:
-            with open(path, "r", encoding="utf-8") as f:
-                self.glyph_pool = json.load(f)
-        except Exception as e:
-            print(f"[SKGEngine] Unable to load glyphs from {path}: {e}")
-            self.glyph_pool = []
-
-    def _log(self, path, entry):
-        try:
-            with open(path, "a") as f:
-                f.write(json.dumps(entry) + "\n")
-        except Exception:
-            pass
-
-    def save_state(self):
-        for attr in ("token_map", "adjacency_map"):
-            path = self._state_path(attr)
-            try:
-                with open(path, "w") as f:
-                    json.dump(getattr(self, attr), f, indent=2)
-            except Exception:
-                pass
 
     def update_glyph_weight(self, glyph):
         if not isinstance(glyph, dict):
