@@ -13,7 +13,9 @@ os.makedirs(GLYPH_IMAGE_DIR, exist_ok=True)
 # Ensure the Symbola font exists at the specified path
 try:
     if not os.path.exists(FONT_PATH):
-        raise FileNotFoundError(f"[ERROR] Missing font: {FONT_PATH}. Please ensure Symbola.ttf is located in the '_fonts' directory.")
+        raise FileNotFoundError(
+            f"[ERROR] Missing font: {FONT_PATH}. Please ensure Symbola.ttf is located in the repository root."
+        )
 except FileNotFoundError as e:
     print(e)
     exit(1)

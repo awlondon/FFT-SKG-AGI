@@ -6,7 +6,7 @@ import hashlib
 from PIL import Image, ImageDraw, ImageFont
 from datetime import datetime
 
-# Resolve the project root and set default font path
+# Resolve the project root and default font path
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 DEFAULT_FONT_PATH = os.path.join(ROOT_DIR, "Symbola.ttf")
 
@@ -23,7 +23,7 @@ def generate_glyph_image(token, output_dir="modalities/images", font_path=DEFAUL
     image_path = os.path.join(output_dir, image_filename)
     os.makedirs(output_dir, exist_ok=True)
 
-    # Image configuration
+    # Image config
     width, height = 512, 512
     background_color = "white"
     text_color = "black"
@@ -65,7 +65,7 @@ def externalize_token(token, token_data, output_dir="modalities/images"):
         print(f"[GlyphVisualizer] Failed to externalize token: {token}")
 
 if __name__ == "__main__":
-    # Example manual invocation (normally triggered from SKGEngine)
+    # Example manual test case
     token_data = {
         "token": "truth",
         "frequency": 5,
