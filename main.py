@@ -1,28 +1,28 @@
 import os
 import json
-from glyph_visualizer import generate_glyph_image
 from skg_engine import SKGEngine
 from glyph_builder import build_glyph_if_needed
 from agency_gate import process_agency_gates
+from tts_engine import speak
+from stt_engine import transcribe_speech
+from glyph_visualizer import generate_glyph_image
 
+# Create required output directories
 required_dirs = [
     "modalities/fft_visual",
     "modalities/audio",
     "modalities/images",
     "modalities/fft_audio"
 ]
-
 for directory in required_dirs:
     os.makedirs(directory, exist_ok=True)
-
 
 # Constants
 data_path = "./glyph_memory"
 os.makedirs(data_path, exist_ok=True)
 
-# Initialize engine
+# Initialize the symbolic cognition engine
 skg = SKGEngine(data_path)
-
 
 def load_or_create_glyph(token):
     glyph_path = os.path.join(data_path, f"{token}.json")
@@ -30,43 +30,64 @@ def load_or_create_glyph(token):
         with open(glyph_path, 'r') as f:
             return json.load(f)
     else:
-        glyph = build_glyph_if_needed(token, glyph_path)
+        glyph = build_glyph_if_needed(token, glyph_path, adj_count=50)
         return glyph
-
 
 def save_glyph(glyph):
     glyph_path = os.path.join(data_path, f"{glyph['token']}.json")
     with open(glyph_path, 'w') as f:
         json.dump(glyph, f, indent=2)
 
-
 def process_input(user_input):
-    # Assuming you're processing the 'user_input' to get the glyph and its data
-    token = user_input.lower()  # Get token from user input
+    token = user_input.lower()
     
-    # Create token data based on the token (example with frequency and weight)
+    # Load or build glyph
+    glyph = load_or_create_glyph(token)
+    
+    # Update SKG with adjacency map
+    adjacents = glyph.get("adjacents", [])
+    skg.update_adjacency_map(token, adjacents)
+
+    # Build token metadata for agency gate
     token_data = {
         "token": token,
-        "frequency": 1,  # You can adjust based on context or token history
-        "weight": 1      # You can adjust based on your logic (e.g., weight might increase with each occurrence)
+        "frequency": 1,
+        "weight": 1
     }
 
-    # Simulate generating the glyph for the token (you may already have this elsewhere)
-    # The glyph_visualizer module resolves Symbola.ttf from the project root
-    glyph = generate_glyph_image(token)
+    # Generate visual glyph image
+    generate_glyph_image(token)
 
-    # Now you call the process_agency_gates with the token_data
+    # Evaluate agency gates
     decisions = process_agency_gates(token, token_data)
+    print("[Agency Gates]", decisions)
 
-    # Handle decisions (e.g., proceed with externalization, exploration, etc.)
-    print(decisions)
+    # Visualize symbolic space field
+    space_field = skg.generate_space_field(token)
+    print("[Space Field]", space_field)
 
+    # Report top 3 adjacents
+    top_three = sorted(
+        skg.get_adjacencies_for_token(token).items(),
+        key=lambda x: x[1],
+        reverse=True
+    )[:3]
+    print("[Top Adjacents]", top_three)
 
+    # Optional: speak the top 3 adjacent tokens
+    if top_three:
+        speak(" ".join(t for t, _ in top_three))
 
 if __name__ == "__main__":
-    print("SKG-R2 Engine Initialized. Type 'exit' to quit.")
+    print("⚙️  SKG-R2 Engine Initialized. Type 'exit' to quit.")
     while True:
-        user_input = input("\nEnter token: ").strip()
+        user_input = input("\nEnter token or type 'voice': ").strip()
         if user_input.lower() == 'exit':
             break
+        elif user_input.lower() == 'voice':
+            spoken = transcribe_speech()
+            if spoken:
+                speak(f"You said {spoken}")
+                process_input(spoken)
+            continue
         process_input(user_input)

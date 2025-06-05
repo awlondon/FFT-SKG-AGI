@@ -1,10 +1,12 @@
 # glyph_visualizer.py
+
 import os
-from PIL import Image, ImageDraw, ImageFont
+import re
 import hashlib
+from PIL import Image, ImageDraw, ImageFont
 from datetime import datetime
 
-# Resolve the project root and default font path once at import time
+# Resolve the project root and set default font path
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 DEFAULT_FONT_PATH = os.path.join(ROOT_DIR, "Symbola.ttf")
 
@@ -14,29 +16,29 @@ def generate_glyph_image(token, output_dir="modalities/images", font_path=DEFAUL
     """
     print(f"[GlyphVisualizer] Generating glyph image for: {token}")
 
-    # Generate a hash for the token to create a unique filename
+    # Create a hashed and sanitized filename
     hash_id = hashlib.sha1(token.encode()).hexdigest()[:8]
-    image_path = os.path.join(output_dir, f"{token}_{hash_id}_sigil.png")
+    safe_token = re.sub(r"[^a-zA-Z0-9_-]", "_", token)
+    image_filename = f"{safe_token}_{hash_id}_sigil.png"
+    image_path = os.path.join(output_dir, image_filename)
     os.makedirs(output_dir, exist_ok=True)
 
+    # Image configuration
     width, height = 512, 512
     background_color = "white"
     text_color = "black"
     font_size = 220
 
     try:
-        # Try to load the Symbola font from the provided path
         try:
             font = ImageFont.truetype(font_path, font_size)
         except Exception as e:
-            print(f"[GlyphVisualizer] Error loading Symbola font: {e}")
-            # Fallback if Symbola font is unavailable
+            print(f"[GlyphVisualizer] Warning: Could not load Symbola font: {e}")
             font = ImageFont.load_default()
 
         img = Image.new("RGB", (width, height), color=background_color)
         draw = ImageDraw.Draw(img)
 
-        # Use textbbox for positioning the token in the center
         bbox = draw.textbbox((0, 0), token, font=font)
         text_w, text_h = bbox[2] - bbox[0], bbox[3] - bbox[1]
         text_position = ((width - text_w) // 2, (height - text_h) // 2)
@@ -52,23 +54,21 @@ def generate_glyph_image(token, output_dir="modalities/images", font_path=DEFAUL
 
 def externalize_token(token, token_data, output_dir="modalities/images"):
     """
-    Externalize a token by generating its glyph image and possibly additional symbolic output.
+    Externalize a token by generating its glyph image.
+    Additional modalities (like FFT or audio) can be added here.
     """
     print(f"[GlyphVisualizer] Externalizing token: {token}")
     glyph_image = generate_glyph_image(token, output_dir)
-
-    # Additional processing can happen here, like generating FFT or other outputs
     if glyph_image:
-        print(f"Token {token} externalized with glyph image at {glyph_image}")
+        print(f"[GlyphVisualizer] Token '{token}' externalized with image at: {glyph_image}")
     else:
-        print(f"Failed to externalize token: {token}")
+        print(f"[GlyphVisualizer] Failed to externalize token: {token}")
 
-# Example usage:
-token_data = {
-    "token": "truth",  # Token name
-    "frequency": 5,    # Frequency (useful for gate decisions)
-    "weight": 10       # Weight (for decision making)
-}
-
-# This would typically be triggered from agency gate decisions in the recursive process
-externalize_token(token_data["token"], token_data)
+if __name__ == "__main__":
+    # Example manual invocation (normally triggered from SKGEngine)
+    token_data = {
+        "token": "truth",
+        "frequency": 5,
+        "weight": 10
+    }
+    externalize_token(token_data["token"], token_data)
