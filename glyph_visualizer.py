@@ -4,11 +4,14 @@ from PIL import Image, ImageDraw, ImageFont
 import hashlib
 from datetime import datetime
 
-def generate_glyph_image(token, output_dir="modalities/images", font_path="../Symbola.ttf"):
+def generate_glyph_image(token, output_dir="modalities/images", font_path=None):
     """
     Generate and save an image of a glyph corresponding to the given token.
     """
     print(f"[GlyphVisualizer] Generating glyph image for: {token}")
+
+    if font_path is None:
+        font_path = os.path.join(os.path.dirname(__file__), "Symbola.ttf")
 
     # Generate a hash for the token to create a unique filename
     hash_id = hashlib.sha1(token.encode()).hexdigest()[:8]
@@ -21,7 +24,7 @@ def generate_glyph_image(token, output_dir="modalities/images", font_path="../Sy
     font_size = 220
 
     try:
-        # Try to load the Symbola font from the provided path
+        # Try to load the Symbola font from the specified path
         try:
             font = ImageFont.truetype(font_path, font_size)
         except Exception as e:
