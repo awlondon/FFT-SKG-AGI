@@ -3,37 +3,44 @@
 import os
 import numpy as np
 from PIL import Image
-import matplotlib.pyplot as plt
 
-def generate_fft_from_image(image_path, output_dir="modalities/fft_visual"):
+def generate_fft_from_image(image_path, output_dir="modalities/fft_visual", max_dim=512):
+    """Generate a normalized FFT image from the given file."""
     print(f"[FFT] Generating FFT from image: {image_path}")
-    
-    if not os.path.exists(output_dir):
-        os.makedirs(output_dir, exist_ok=True)
+
+    os.makedirs(output_dir, exist_ok=True)
+
+    if not os.path.exists(image_path):
+        print(f"[FFT] Image not found: {image_path}")
+        return None
 
     try:
-        # Load and convert image to grayscale
         img = Image.open(image_path).convert("L")
-        img_array = np.array(img)
+        img = img.resize((max_dim, max_dim), Image.ANTIALIAS)
 
-        # Perform FFT
-        fft_result = np.fft.fft2(img_array)
-        fft_shifted = np.fft.fftshift(fft_result)
-        magnitude_spectrum = 20 * np.log(np.abs(fft_shifted) + 1e-8)
+        arr = np.array(img)
+        fft = np.fft.fftshift(np.fft.fft2(arr))
+        magnitude = np.abs(fft)
+        magnitude = np.log1p(magnitude)
 
-        # Generate filename
+        if np.max(magnitude) == 0:
+            print("[FFT] Warning: zero magnitude in FFT result")
+            return None
+
+        magnitude = (magnitude / np.max(magnitude) * 255).astype(np.uint8)
+        magnitude = 255 - magnitude
+
+        center = (magnitude.shape[0] // 2, magnitude.shape[1] // 2)
+        y, x = np.ogrid[:magnitude.shape[0], :magnitude.shape[1]]
+        distance = np.sqrt((x - center[1]) ** 2 + (y - center[0]) ** 2)
+        fade = 1 - (distance / np.max(distance))
+        magnitude = (magnitude * fade).astype(np.uint8)
+
         base_name = os.path.splitext(os.path.basename(image_path))[0]
         fft_filename = f"{base_name}_fft_spark.png"
         fft_output_path = os.path.join(output_dir, fft_filename)
 
-        # Save FFT visualization
-        plt.figure(figsize=(4, 4), dpi=100)
-        plt.imshow(magnitude_spectrum, cmap='gray')
-        plt.axis('off')
-        plt.tight_layout()
-        plt.savefig(fft_output_path, bbox_inches='tight', pad_inches=0)
-        plt.close()
-
+        Image.fromarray(magnitude, mode="L").save(fft_output_path)
         print(f"[FFT] FFT image saved to: {fft_output_path}")
         return fft_output_path
 
