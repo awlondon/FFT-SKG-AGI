@@ -1,28 +1,81 @@
-# FFT-SKG-AGI
+⚙️ FFT-SKG-AGI
+FFT-SKG-AGI is an experimental symbolic cognition engine that combines frequency-domain analysis with symbolic token processing. It recursively explores relationships between tokens, assigns glyphs via agency gates, and expands each token into multi-modal representations like:
 
-FFT-SKG-AGI is an experimental symbolic cognition engine. It generates symbolic glyphs from text tokens and explores relationships between them using recursive agency gates. Modalities such as audio FFTs and glyph imagery are produced alongside log files that describe the system's decisions.
+🧠 Symbolic glyphs
 
-## Running the engine
+🎧 Audio + FFTs
 
-Execute the interactive CLI to enter tokens and process them through the agency gates:
+🖼️ Visual glyph images
 
-```bash
+📈 Log-based thought traces
+
+The system acts as a sandbox for symbolic knowledge graph emergence using recursive agency, OpenAI-driven context generation, and offline modality synthesis.
+
+🚀 Running the Engine
+Run the interactive engine with:
+
+bash
+Copy
+Edit
 python main.py
-```
+On first run, main.py will auto-create folders under modalities/, glyph_memory/, and logs/.
 
-`main.py` will create required modality directories the first time it runs and will prompt for token input in a loop. Each token is passed through the agency gate pipeline which may generate glyph images and FFT data.
+Each token you enter is:
 
-## Visualizing logs
+Assigned a glyph
 
-Agency gate activity is logged to JSONL files. Use `graph_cli.py` to render these logs as a graph for quick inspection:
+Passed through the agency gate pipeline
 
-```bash
+Optionally externalized via FFT or image/audio generation
+
+📊 Visualizing Thought Logs
+To inspect agency gate behavior over time:
+
+bash
+Copy
+Edit
 python graph_cli.py path/to/gate_decision_log.jsonl
-```
+This parses decision logs and visualizes relationships between tokens, adjacencies, and symbolic gate triggers.
 
-The script will parse the log and display relationships between tokens and decisions.
+🔧 Requirements
+Install dependencies with:
 
-## Project goals
+bash
+Copy
+Edit
+pip install -r requirements.txt
+Required Python Packages:
+openai
 
-This repository is a sandbox for exploring symbolic knowledge graphs driven by open ended token streams. It aims to combine OpenAI powered adjacency generation with offline synthesis of audio, FFT visualizations and glyph imagery. Visualization tools help track how agency gates influence token processing over time.
+requests
 
+numpy
+
+scipy
+
+matplotlib
+
+Pillow
+
+pyttsx3
+
+Note: You’ll need valid environment variables for:
+
+OPENAI_API_KEY
+
+SERPAPI_API_KEY
+
+🎯 Project Goals
+This project is designed to:
+
+Simulate agentic symbolic cognition
+
+Assign unique glyphs to token streams
+
+Use adjacency + frequency to recursively generate symbolic knowledge graphs
+
+Produce audio-visual externalizations via FFT + TTS
+
+Enable log-based introspection of symbolic reasoning paths
+
+It’s intended as a foundation for self-evolving AGI cognition based on recursive symbolic structures.
