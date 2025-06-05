@@ -8,6 +8,8 @@ class SKGEngine:
         self.glyph_pool = []  # Holds available glyphs
         self.token_map = {}  # Maps tokens to glyphs
         self.adjacency_map = {}  # Maps tokens to their adjacencies (could be semantic or contextual)
+        self.thought_history = []  # Record of tokens processed in loops
+        self.externalized_last = False  # Flag to signal recent externalization
 
     def update_glyph_weight(self, glyph):
         """Increment symbolic weight for existing glyph or initialize if absent."""
@@ -27,13 +29,21 @@ class SKGEngine:
         # Ensure this function assigns a glyph like 🜂, ⚚, etc.
         if token in self.token_map:
             glyph = self.token_map[token]
+            display = glyph.get("glyph_id", glyph) if isinstance(glyph, dict) else glyph
+            print(f"[SKGEngine] Reusing glyph '{display}' for token '{token}'")
         else:
             # Select an actual symbolic glyph (not the token text)
             glyph = self.select_glyph_for_token(token, adjacency)
             self.token_map[token] = glyph
+            display = glyph.get("glyph_id", glyph) if isinstance(glyph, dict) else glyph
+            print(f"[SKGEngine] Assigned new glyph '{display}' to token '{token}'")
 
         # Update the glyph's weight
         glyph = self.update_glyph_weight(glyph)
+        if isinstance(glyph, dict):
+            weight = glyph.get("modalities", {}).get("text", {}).get("weight")
+            if weight is not None:
+                print(f"[SKGEngine] Weight for token '{token}' is now {weight}")
         return glyph
 
 
@@ -55,6 +65,9 @@ class SKGEngine:
 
         # Assign the glyph for the current token
         current_glyph = self.assign_glyph_to_token(token)
+        self.thought_history.append(token)
+        if len(self.thought_history) > 20:
+            self.thought_history = self.thought_history[-20:]
 
         # Check agency gates (e.g., should we explore further or prune?)
         agency_gate_decision = self.evaluate_agency_gate(token)
@@ -79,8 +92,13 @@ class SKGEngine:
 
     def externalize_token(self, token):
         """Externalize the token's glyph (i.e., generate its output)."""
-        # Here we would trigger the visual/audio generation for the token's glyph
-        print(f"Externalizing token: {token} with glyph: {self.token_map[token]}")
+        glyph = self.token_map.get(token)
+        display = glyph.get("glyph_id", glyph) if isinstance(glyph, dict) else glyph
+        weight = None
+        if isinstance(glyph, dict):
+            weight = glyph.get("modalities", {}).get("text", {}).get("weight")
+        print(f"[SKGEngine] Externalizing '{token}' -> '{display}' (weight: {weight if weight is not None else 'N/A'})")
+        self.externalized_last = True
 
     def update_adjacency_map(self, token, adjacencies):
         """Update the adjacency map for a given token."""
