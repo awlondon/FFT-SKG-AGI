@@ -6,15 +6,18 @@ import hashlib
 from PIL import Image, ImageDraw, ImageFont
 from datetime import datetime
 
-# Resolve the project root and default font path
+# Default font path, resolved from script location
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 DEFAULT_FONT_PATH = os.path.join(ROOT_DIR, "Symbola.ttf")
 
-def generate_glyph_image(token, output_dir="modalities/images", font_path=DEFAULT_FONT_PATH):
+def generate_glyph_image(token, output_dir="modalities/images", font_path=None):
     """
     Generate and save an image of a glyph corresponding to the given token.
     """
     print(f"[GlyphVisualizer] Generating glyph image for: {token}")
+
+    if font_path is None:
+        font_path = DEFAULT_FONT_PATH
 
     # Create a hashed and sanitized filename
     hash_id = hashlib.sha1(token.encode()).hexdigest()[:8]
@@ -23,7 +26,7 @@ def generate_glyph_image(token, output_dir="modalities/images", font_path=DEFAUL
     image_path = os.path.join(output_dir, image_filename)
     os.makedirs(output_dir, exist_ok=True)
 
-    # Image config
+    # Image setup
     width, height = 512, 512
     background_color = "white"
     text_color = "black"
@@ -65,7 +68,6 @@ def externalize_token(token, token_data, output_dir="modalities/images"):
         print(f"[GlyphVisualizer] Failed to externalize token: {token}")
 
 if __name__ == "__main__":
-    # Example manual test case
     token_data = {
         "token": "truth",
         "frequency": 5,
