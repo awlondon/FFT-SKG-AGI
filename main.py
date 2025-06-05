@@ -7,13 +7,14 @@ from tts_engine import speak
 from stt_engine import transcribe_speech
 from glyph_visualizer import generate_glyph_image
 
-# Create required output directories
+# Setup required directories
 required_dirs = [
     "modalities/fft_visual",
     "modalities/audio",
     "modalities/images",
     "modalities/fft_audio"
 ]
+
 for directory in required_dirs:
     os.makedirs(directory, exist_ok=True)
 
@@ -21,9 +22,17 @@ for directory in required_dirs:
 data_path = "./glyph_memory"
 os.makedirs(data_path, exist_ok=True)
 
-# Initialize the symbolic cognition engine
+# Initialize symbolic cognition engine
 skg = SKGEngine(data_path)
 
+# Load extended glyph pool if available
+glyph_pool_path = "extended_glyph_pool.json"
+if os.path.exists(glyph_pool_path):
+    with open(glyph_pool_path, "r", encoding="utf-8") as f:
+        for g in json.load(f):
+            skg.add_glyph_to_pool(g)
+
+# Glyph I/O helpers
 def load_or_create_glyph(token):
     glyph_path = os.path.join(data_path, f"{token}.json")
     if os.path.exists(glyph_path):
@@ -38,35 +47,26 @@ def save_glyph(glyph):
     with open(glyph_path, 'w') as f:
         json.dump(glyph, f, indent=2)
 
+# Input processor
 def process_input(user_input):
     token = user_input.lower()
-    
-    # Load or build glyph
-    glyph = load_or_create_glyph(token)
-    
-    # Update SKG with adjacency map
-    adjacents = glyph.get("adjacents", [])
+
+    glyph_data = load_or_create_glyph(token)
+    if glyph_data.get("glyph_id") not in skg.glyph_pool:
+        skg.add_glyph_to_pool(glyph_data.get("glyph_id"))
+
+    # Update SKG adjacency map
+    adjacents = glyph_data.get("adjacents", [])
     skg.update_adjacency_map(token, adjacents)
 
-    # Build token metadata for agency gate
-    token_data = {
-        "token": token,
-        "frequency": 1,
-        "weight": 1
-    }
-
-    # Generate visual glyph image
+    # Visual glyph rendering
     generate_glyph_image(token)
 
-    # Evaluate agency gates
-    decisions = process_agency_gates(token, token_data)
-    print("[Agency Gates]", decisions)
+    # Run symbolic recursion
+    skg.recursive_thought_loop(token)
+    save_glyph(glyph_data)
 
-    # Visualize symbolic space field
-    space_field = skg.generate_space_field(token)
-    print("[Space Field]", space_field)
-
-    # Report top 3 adjacents
+    # Top adjacents report
     top_three = sorted(
         skg.get_adjacencies_for_token(token).items(),
         key=lambda x: x[1],
@@ -74,10 +74,18 @@ def process_input(user_input):
     )[:3]
     print("[Top Adjacents]", top_three)
 
-    # Optional: speak the top 3 adjacent tokens
     if top_three:
         speak(" ".join(t for t, _ in top_three))
 
+    # Optional console clear after externalization
+    if hasattr(skg, "externalized_last") and skg.externalized_last:
+        os.system("cls" if os.name == "nt" else "clear")
+        print("[Main] Recent thought loop:")
+        if hasattr(skg, "thought_history"):
+            print(" -> ".join(skg.thought_history[-10:]))
+        skg.externalized_last = False
+
+# Main loop
 if __name__ == "__main__":
     print("⚙️  SKG-R2 Engine Initialized. Type 'exit' to quit.")
     while True:

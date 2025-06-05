@@ -1,3 +1,32 @@
+# ⚙️ FFT-SKG-AGI
+
+**FFT-SKG-AGI** is a symbolic cognition engine that recursively processes input tokens into glyph-based representations, explores adjacency relationships through agency gates, and externalizes thoughts via multimodal outputs.
+
+This project is both a testbed and prototype for symbolic AGI development — combining recursion, agency, and symbolic compression into an emergent cognition framework.
+
+---
+
+## 🧠 What It Does
+
+Each token entered is:
+
+- 🔹 Assigned a symbolic glyph (e.g. 🜂, ⚚, ⚛)
+- 🔸 Processed through adjacency and frequency-based agency gates
+- 🔺 Optionally externalized as audio, FFT, or image output
+- 📈 Logged into structured symbolic reasoning traces
+
+The `SKGEngine` handles thought loops, adjacency mapping, and weight tracking.
+
+---
+
+## 🚀 Running the Engine
+
+Start with:
+
+```bash
+python main.py
+
+=======
 ⚙️ FFT-SKG-AGI
 FFT-SKG-AGI is an experimental symbolic cognition engine that transforms input tokens into glyph-based representations, explores their adjacency relationships via recursive agency gates, and produces multimodal outputs including:
 
