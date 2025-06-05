@@ -4,20 +4,22 @@ from datetime import datetime
 import random
 from superknowledge_graph import SuperKnowledgeGraph
 from agency_gate import process_agency_gates
+from skg_thought_tracker import SKGThoughtTracker
 
 class SKGEngine:
     def __init__(self, memory_path, glyph_pool_path="glossary/extended_glyph_pool.json"):
         self.memory_path = memory_path
-        self.token_map = {}  # token -> glyph
-        self.adjacency_map = {}  # token -> [adjacent_tokens]
+        self.token_map = {}
+        self.adjacency_map = {}
         self.glyph_pool = []
         self.graph = SuperKnowledgeGraph()
+        self.thought_tracker = SKGThoughtTracker()
 
-        # Load persisted state
+        # Load state and glyphs
         self._load_state()
         self._load_glyph_pool(glyph_pool_path)
 
-        # Logging
+        # Logs
         self.log_dir = os.path.join(self.memory_path, "logs")
         os.makedirs(self.log_dir, exist_ok=True)
         self.adj_log = os.path.join(self.log_dir, "adjacency_walk.log")
@@ -109,29 +111,33 @@ class SKGEngine:
             self.graph.connect("global", token, adj)
         self.save_state()
 
-    def recursive_thought_loop(self, token, depth=0, max_depth=5, visited=None):
-        if visited is None:
-            visited = set()
-        if depth >= max_depth or token in visited:
+    def recursive_thought_loop(self, token, depth=0, max_depth=5, parent=None):
+        if depth >= max_depth:
             return []
-        visited.add(token)
 
-        glyph = self.assign_glyph_to_token(token)
+        # Log if this is a new symbolic expansion from a known parent
+        if token not in self.token_map and parent is not None:
+            origin_glyph = self.token_map.get(parent)
+            self.thought_tracker.log_expansion(parent, token, origin_glyph)
+
+        current_glyph = self.assign_glyph_to_token(token)
+        self.thought_tracker.log_thought_loop(token, depth, [current_glyph], False)
+
         gate = self.evaluate_agency_gate(token)
-
         if gate == "externalize":
             self.externalize_token(token)
-            return [glyph]
+            self.thought_tracker.log_thought_loop(token, depth, [current_glyph], True)
+            self.thought_tracker.reset()
+            return [current_glyph]
 
-        result = [glyph]
-        for adjacent in self.get_adjacencies_for_token(token):
-            self._log(self.adj_log, {
-                "timestamp": datetime.utcnow().isoformat() + "Z",
-                "from": token,
-                "to": adjacent,
-                "depth": depth,
-            })
-            result.extend(self.recursive_thought_loop(adjacent, depth + 1, max_depth, visited))
+        adjacencies = self.get_adjacencies_for_token(token)
+        self.thought_tracker.log_convergence([token] + adjacencies, len(adjacencies), 0)
+        result = [current_glyph]
+
+        for slot_index, adjacent_token in enumerate(adjacencies):
+            self.thought_tracker.log_adjacency(token, adjacent_token, slot_index, weight_delta=1)
+            result.extend(self.recursive_thought_loop(adjacent_token, depth + 1, max_depth, parent=token))
+
         return result
 
     def evaluate_agency_gate(self, token):
@@ -146,7 +152,7 @@ class SKGEngine:
         return random.choice([d["gate"] for d in decisions])
 
     def externalize_token(self, token):
-        print(f"Externalizing token: {token} with glyph: {self.token_map[token]}")
+        print(f"[SKGEngine] Externalizing token: {token} with glyph: {self.token_map[token]}")
 
     def add_glyph_to_pool(self, glyph):
         self.glyph_pool.append(glyph)

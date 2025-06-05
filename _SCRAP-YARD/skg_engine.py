@@ -5,6 +5,7 @@ import json
 import time
 import logging
 import sys
+from skg_thought_tracker import SKGThoughtTracker
 
 from intermodal_linker import update_intermodal_map
 
@@ -73,7 +74,8 @@ class SKGEngine:
         self.stop_requested = False
         self.visualizer = visualizer
         self.gate_data = gate_data
-        self.tu = TokenUtils()
+        self.thought_tracker = SKGThoughtTracker()
+        self.tu = TokenUtils(thought_tracker=self.thought_tracker)
 
         # Initialize input_token_ids before using it
         self.input_token_ids = set()
