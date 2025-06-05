@@ -45,8 +45,8 @@ class SKGEngine:
         return glyph
 
     def get_adjacencies_for_token(self, token):
-        """Get the adjacency list for a token. Can be expanded to semantic adjacencies."""
-        return self.adjacency_map.get(token, [])
+        """Return adjacency mapping ``{adj_token: weight}`` for ``token``."""
+        return self.adjacency_map.get(token, {})
 
     def recursive_thought_loop(self, token, depth=0, max_depth=5):
         """Perform a recursive exploration of a token's adjacencies, activating agency gates."""
@@ -65,8 +65,8 @@ class SKGEngine:
         # Otherwise, continue the recursive thought loop
         adjacencies = self.get_adjacencies_for_token(token)
         result = [current_glyph]
-        
-        for adjacent_token in adjacencies:
+
+        for adjacent_token in adjacencies.keys():
             result.extend(self.recursive_thought_loop(adjacent_token, depth + 1, max_depth))
 
         return result
@@ -83,9 +83,39 @@ class SKGEngine:
         print(f"Externalizing token: {token} with glyph: {self.token_map[token]}")
 
     def update_adjacency_map(self, token, adjacencies):
-        """Update the adjacency map for a given token."""
-        self.adjacency_map[token] = adjacencies
+        """Update weights for ``token`` adjacencies.
+
+        ``adjacencies`` can be a list of tokens or dictionaries containing
+        ``token`` and ``weight`` keys.
+        """
+        mapping = self.adjacency_map.setdefault(token, {})
+        for adj in adjacencies:
+            adj_token = adj.get("token", adj)
+            weight = adj.get("weight", 1)
+            mapping[adj_token] = mapping.get(adj_token, 0) + weight
 
     def add_glyph_to_pool(self, glyph):
         """Add a new glyph to the glyph pool."""
         self.glyph_pool.append(glyph)
+
+    def generate_space_field(self, token, radius=1.0):
+        """Generate a simple high-level space field layout for a token.
+
+        This arranges a token's immediate adjacencies around it using the
+        geometry routines from ``hlsf_adapter``. The returned mapping is a
+        dictionary of token -> (x, y) coordinates.
+        """
+        from hlsf_adapter import generate_vertices
+
+        field = {token: (0.0, 0.0)}
+        adjacencies = self.get_adjacencies_for_token(token)
+
+        adjacency_tokens = list(adjacencies.keys())
+
+        sides = max(len(adjacency_tokens), 1)
+        vertices = generate_vertices((0.0, 0.0), radius, sides)
+
+        for idx, adj_token in enumerate(adjacency_tokens):
+            field[adj_token] = vertices[idx % sides]
+
+        return field
