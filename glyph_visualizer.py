@@ -59,12 +59,10 @@ def externalize_token(token, token_data, output_dir="modalities/images"):
     else:
         print(f"Failed to externalize token: {token}")
 
-# Example usage:
-token_data = {
-    "token": "truth",  # Token name
-    "frequency": 5,    # Frequency (useful for gate decisions)
-    "weight": 10       # Weight (for decision making)
-}
-
-# This would typically be triggered from agency gate decisions in the recursive process
-externalize_token(token_data["token"], token_data)
+if __name__ == "__main__":
+    token_data = {
+        "token": "truth",
+        "frequency": 5,
+        "weight": 10,
+    }
+    externalize_token(token_data["token"], token_data)
