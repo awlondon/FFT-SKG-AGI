@@ -1,25 +1,39 @@
-import json
 import os
-from datetime import datetime
+import json
 import random
+from datetime import datetime
+from typing import Optional
 from superknowledge_graph import SuperKnowledgeGraph
 from agency_gate import process_agency_gates
 from skg_thought_tracker import SKGThoughtTracker
 
+
 class SKGEngine:
-    def __init__(self, memory_path, glyph_pool_path="glossary/extended_glyph_pool.json"):
+    def __init__(self, memory_path: str, glyph_path: Optional[str] = None):
+        """
+        Initialize the SKG engine.
+
+        Parameters
+        ----------
+        memory_path : str
+            Path where glyph memory files are stored.
+        glyph_path : Optional[str], default "glossary/extended_glyph_pool.json"
+            JSON file containing a list of glyphs to populate glyph_pool.
+        """
         self.memory_path = memory_path
+        self.glyph_list_path = glyph_path or "glossary/extended_glyph_pool.json"
         self.token_map = {}
         self.adjacency_map = {}
-        self.glyph_pool = []
         self.graph = SuperKnowledgeGraph()
         self.thought_tracker = SKGThoughtTracker()
 
-        # Load state and glyphs
-        self._load_state()
-        self._load_glyph_pool(glyph_pool_path)
+        # Load glyphs
+        self._load_glyph_pool(self.glyph_list_path)
 
-        # Logs
+        # Load saved state
+        self._load_state()
+
+        # Initialize logs
         self.log_dir = os.path.join(self.memory_path, "logs")
         os.makedirs(self.log_dir, exist_ok=True)
         self.adj_log = os.path.join(self.log_dir, "adjacency_walk.log")
@@ -38,14 +52,13 @@ class SKGEngine:
                 except Exception:
                     setattr(self, attr, {})
 
-    def save_state(self):
-        for attr in ("token_map", "adjacency_map"):
-            path = self._state_path(attr)
-            try:
-                with open(path, "w") as f:
-                    json.dump(getattr(self, attr), f, indent=2)
-            except Exception:
-                pass
+    def _load_glyph_pool(self, path):
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                self.glyph_pool = json.load(f)
+        except Exception as e:
+            print(f"[SKGEngine] Unable to load glyphs from {path}: {e}")
+            self.glyph_pool = []
 
     def _log(self, path, entry):
         try:
@@ -54,15 +67,14 @@ class SKGEngine:
         except Exception:
             pass
 
-    def _load_glyph_pool(self, path):
-        if os.path.exists(path):
+    def save_state(self):
+        for attr in ("token_map", "adjacency_map"):
+            path = self._state_path(attr)
             try:
-                with open(path, "r", encoding="utf-8") as f:
-                    self.glyph_pool = json.load(f)
-            except Exception as e:
-                print(f"[SKGEngine] Failed to load glyph pool: {e}")
-        else:
-            print(f"[SKGEngine] Glyph pool not found at {path}")
+                with open(path, "w") as f:
+                    json.dump(getattr(self, attr), f, indent=2)
+            except Exception:
+                pass
 
     def update_glyph_weight(self, glyph):
         if not isinstance(glyph, dict):
@@ -106,7 +118,9 @@ class SKGEngine:
         return self.adjacency_map.get(token, {})
 
     def update_adjacency_map(self, token, adjacencies):
-        """Support both list-style and dict-style adjacents."""
+        """
+        Update adjacency weights. Supports both list-style and dict-style input.
+        """
         mapping = self.adjacency_map.setdefault(token, {})
         for adj in adjacencies:
             adj_token = adj.get("token", adj) if isinstance(adj, dict) else adj
@@ -164,7 +178,9 @@ class SKGEngine:
         return self.graph.traverse(start_token, max_steps=steps)
 
     def generate_space_field(self, token, radius=1.0):
-        """Generate a basic spatial layout for a token's adjacents."""
+        """
+        Generate a spatial layout for a token's adjacents using HLSF routines.
+        """
         from hlsf_adapter import generate_vertices
 
         field = {token: (0.0, 0.0)}
