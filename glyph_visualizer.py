@@ -4,7 +4,11 @@ from PIL import Image, ImageDraw, ImageFont
 import hashlib
 from datetime import datetime
 
-def generate_glyph_image(token, output_dir="modalities/images", font_path="../Symbola.ttf"):
+# Resolve the project root and default font path once at import time
+ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
+DEFAULT_FONT_PATH = os.path.join(ROOT_DIR, "Symbola.ttf")
+
+def generate_glyph_image(token, output_dir="modalities/images", font_path=DEFAULT_FONT_PATH):
     """
     Generate and save an image of a glyph corresponding to the given token.
     """
