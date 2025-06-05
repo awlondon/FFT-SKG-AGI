@@ -1,0 +1,12 @@
+openai
+Pillow
+numpy
+matplotlib
+scipy
+requests
+pyttsx3
+opencv-python
+keyboard
+imageio
+pygame
+pyaudio

@@ -1,109 +1,161 @@
+import os
 import json
-from datetime import datetime
 import random
+from datetime import datetime
+from typing import Optional
+from superknowledge_graph import SuperKnowledgeGraph
+from agency_gate import process_agency_gates
+from skg_thought_tracker import SKGThoughtTracker
 
 class SKGEngine:
-    def __init__(self, memory_path):
+    def __init__(self, memory_path: str, glyph_path: Optional[str] = "glossary/extended_glyph_pool.json"):
         self.memory_path = memory_path
-        self.glyph_pool = []  # Holds available glyphs
-        self.token_map = {}  # Maps tokens to glyphs
-        self.adjacency_map = {}  # Maps tokens to their adjacencies (could be semantic or contextual)
-        self.thought_history = []  # Record of tokens processed in loops
-        self.externalized_last = False  # Flag to signal recent externalization
+        self.glyph_list_path = glyph_path
+        self.token_map = {}
+        self.adjacency_map = {}
+        self.glyph_pool = []
+        self.graph = SuperKnowledgeGraph()
+        self.thought_tracker = SKGThoughtTracker()
+        self.thought_history = []
+        self.externalized_last = False
+
+        # Load glyph pool
+        self._load_glyph_pool(self.glyph_list_path)
+        self._load_state()
+
+        # Logging paths
+        self.log_dir = os.path.join(self.memory_path, "logs")
+        os.makedirs(self.log_dir, exist_ok=True)
+        self.adj_log = os.path.join(self.log_dir, "adjacency_walk.log")
+        self.weight_log = os.path.join(self.log_dir, "weight_updates.log")
+
+    def _log(self, log_path, entry):
+        with open(log_path, "a") as f:
+            f.write(json.dumps(entry) + "\n")
+
+    def _load_glyph_pool(self, path):
+        if path and os.path.exists(path):
+            with open(path, "r", encoding="utf-8") as f:
+                self.glyph_pool = json.load(f)
+
+    def _load_state(self):
+        # Optional: Implement persistent token/glyph state if desired
+        pass
+
+    def save_state(self):
+        # Optional: Save current token_map, adjacency_map, etc.
+        pass
 
     def update_glyph_weight(self, glyph):
-        """Increment symbolic weight for existing glyph or initialize if absent."""
-        if "modalities" in glyph and "text" in glyph["modalities"]:
-            if "weight" in glyph["modalities"]["text"]:
-                glyph["modalities"]["text"]["weight"] += 1
-            else:
-                glyph["modalities"]["text"]["weight"] = 1
-        else:
-            glyph.setdefault("modalities", {}).setdefault("text", {})["weight"] = 1
-        
+        if not isinstance(glyph, dict):
+            return glyph
+        old_weight = glyph.get("modalities", {}).get("text", {}).get("weight", 0)
+        glyph.setdefault("modalities", {}).setdefault("text", {})["weight"] = old_weight + 1
         glyph["last_updated"] = datetime.utcnow().isoformat() + "Z"
+
+        self._log(self.weight_log, {
+            "timestamp": glyph["last_updated"],
+            "token": glyph.get("token"),
+            "glyph_id": glyph.get("glyph_id"),
+            "old_weight": old_weight,
+            "new_weight": glyph["modalities"]["text"]["weight"],
+        })
         return glyph
 
     def assign_glyph_to_token(self, token, adjacency=None):
-        """Assign a glyph to a token, considering its adjacency and context."""
-        # Ensure this function assigns a glyph like 🜂, ⚚, etc.
         if token in self.token_map:
             glyph = self.token_map[token]
-            display = glyph.get("glyph_id", glyph) if isinstance(glyph, dict) else glyph
-            print(f"[SKGEngine] Reusing glyph '{display}' for token '{token}'")
         else:
-            # Select an actual symbolic glyph (not the token text)
-            glyph = self.select_glyph_for_token(token, adjacency)
+            glyph_id = self.select_glyph_for_token(token, adjacency)
+            now = datetime.utcnow().isoformat() + "Z"
+            glyph = {
+                "glyph_id": glyph_id,
+                "token": token,
+                "created_on": now,
+                "last_updated": now,
+                "modalities": {"text": {"weight": 0}},
+            }
             self.token_map[token] = glyph
-            display = glyph.get("glyph_id", glyph) if isinstance(glyph, dict) else glyph
-            print(f"[SKGEngine] Assigned new glyph '{display}' to token '{token}'")
-
-        # Update the glyph's weight
         glyph = self.update_glyph_weight(glyph)
-        if isinstance(glyph, dict):
-            weight = glyph.get("modalities", {}).get("text", {}).get("weight")
-            if weight is not None:
-                print(f"[SKGEngine] Weight for token '{token}' is now {weight}")
+        self.save_state()
         return glyph
-
 
     def select_glyph_for_token(self, token, adjacency=None):
-        """Select the most appropriate glyph for a token, considering context."""
-        # Here, we can select the glyph based on contextual relevance.
-        # For now, select a random glyph from the pool.
-        glyph = random.choice(self.glyph_pool)
-        return glyph
+        return random.choice(self.glyph_pool) if self.glyph_pool else "□"
+
+    def update_adjacency_map(self, token, adjacencies):
+        mapping = self.adjacency_map.setdefault(token, {})
+        for adj in adjacencies:
+            adj_token = adj.get("token", adj) if isinstance(adj, dict) else adj
+            weight = adj.get("weight", 1) if isinstance(adj, dict) else 1
+            mapping[adj_token] = mapping.get(adj_token, 0) + weight
+            self.graph.connect("global", token, adj_token)
+        self.save_state()
 
     def get_adjacencies_for_token(self, token):
-        """Get the adjacency list for a token. Can be expanded to semantic adjacencies."""
-        return self.adjacency_map.get(token, [])
+        return self.adjacency_map.get(token, {})
 
-    def recursive_thought_loop(self, token, depth=0, max_depth=5):
-        """Perform a recursive exploration of a token's adjacencies, activating agency gates."""
+    def recursive_thought_loop(self, token, depth=0, max_depth=5, parent=None):
         if depth >= max_depth:
             return []
 
-        # Assign the glyph for the current token
+        if token not in self.token_map and parent is not None:
+            origin_glyph = self.token_map.get(parent)
+            self.thought_tracker.log_expansion(parent, token, origin_glyph)
+
         current_glyph = self.assign_glyph_to_token(token)
         self.thought_history.append(token)
         if len(self.thought_history) > 20:
             self.thought_history = self.thought_history[-20:]
 
-        # Check agency gates (e.g., should we explore further or prune?)
-        agency_gate_decision = self.evaluate_agency_gate(token)
-        if agency_gate_decision == 'externalize':
+        gate = self.evaluate_agency_gate(token)
+        if gate == "externalize":
             self.externalize_token(token)
-            return [current_glyph]  # Return the glyph if it's externalized
+            self.thought_tracker.log_thought_loop(token, depth, [current_glyph], True)
+            self.thought_tracker.reset()
+            return [current_glyph]
 
-        # Otherwise, continue the recursive thought loop
-        adjacencies = self.get_adjacencies_for_token(token)
+        adjacents = self.get_adjacencies_for_token(token)
+        self.thought_tracker.log_convergence([token] + list(adjacents.keys()), len(adjacents), 0)
+
         result = [current_glyph]
-        
-        for adjacent_token in adjacencies:
-            result.extend(self.recursive_thought_loop(adjacent_token, depth + 1, max_depth))
+        for slot_index, adj_token in enumerate(adjacents.keys()):
+            self.thought_tracker.log_adjacency(token, adj_token, slot_index, weight_delta=adjacents[adj_token])
+            result.extend(self.recursive_thought_loop(adj_token, depth + 1, max_depth, parent=token))
 
         return result
 
     def evaluate_agency_gate(self, token):
-        """Evaluate which agency gate should be activated based on the token's context."""
-        # For now, a random decision is made (this could be made more sophisticated based on token's state)
-        decisions = ['explore', 'reevaluate', 'externalize', 'prune']
-        return random.choice(decisions)
+        glyph = self.token_map.get(token, {})
+        weight = glyph.get("modalities", {}).get("text", {}).get("weight", 1)
+        adj_count = len(self.adjacency_map.get(token, {}))
+        token_data = {"frequency": weight, "weight": weight}
+        decisions = process_agency_gates(token, token_data, adj_count)
+        for d in decisions:
+            if d["decision"] == "YES":
+                return d["gate"]
+        return random.choice([d["gate"] for d in decisions])
 
     def externalize_token(self, token):
-        """Externalize the token's glyph (i.e., generate its output)."""
         glyph = self.token_map.get(token)
         display = glyph.get("glyph_id", glyph) if isinstance(glyph, dict) else glyph
-        weight = None
-        if isinstance(glyph, dict):
-            weight = glyph.get("modalities", {}).get("text", {}).get("weight")
-        print(f"[SKGEngine] Externalizing '{token}' -> '{display}' (weight: {weight if weight is not None else 'N/A'})")
+        weight = glyph.get("modalities", {}).get("text", {}).get("weight") if isinstance(glyph, dict) else None
+        print(f"[SKGEngine] Externalizing '{token}' → '{display}' (weight: {weight if weight is not None else 'N/A'})")
         self.externalized_last = True
 
-    def update_adjacency_map(self, token, adjacencies):
-        """Update the adjacency map for a given token."""
-        self.adjacency_map[token] = adjacencies
-
     def add_glyph_to_pool(self, glyph):
-        """Add a new glyph to the glyph pool."""
         self.glyph_pool.append(glyph)
+
+    def traverse_superknowledge(self, start_token, steps=5):
+        return self.graph.traverse(start_token, max_steps=steps)
+
+    def generate_space_field(self, token, radius=1.0):
+        from hlsf_adapter import generate_vertices
+        field = {token: (0.0, 0.0)}
+        adjacents = self.get_adjacencies_for_token(token)
+        adjacency_tokens = list(adjacents.keys())
+        sides = max(len(adjacency_tokens), 1)
+        vertices = generate_vertices((0.0, 0.0), radius, sides)
+        for idx, adj_token in enumerate(adjacency_tokens):
+            field[adj_token] = vertices[idx % sides]
+        return field
