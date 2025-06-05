@@ -1,11 +1,31 @@
 import json
 from datetime import datetime
 import random
+from typing import Optional
 
 class SKGEngine:
-    def __init__(self, memory_path):
+    def __init__(self, memory_path: str, glyph_path: Optional[str] = None):
+        """Initialize the SKG engine.
+
+        Parameters
+        ----------
+        memory_path : str
+            Path where glyph memory files are stored.
+        glyph_path : Optional[str], default "glossary/extended_glyph_pool.json"
+            JSON file containing a list of glyphs to populate ``glyph_pool``.
+        """
+
         self.memory_path = memory_path
-        self.glyph_pool = []  # Holds available glyphs
+        self.glyph_list_path = glyph_path or "glossary/extended_glyph_pool.json"
+
+        # Load available glyphs from file
+        try:
+            with open(self.glyph_list_path, "r", encoding="utf-8") as f:
+                self.glyph_pool = json.load(f)
+        except Exception as e:
+            print(f"[SKGEngine] Unable to load glyphs from {self.glyph_list_path}: {e}")
+            self.glyph_pool = []
+
         self.token_map = {}  # Maps tokens to glyphs
         self.adjacency_map = {}  # Maps tokens to their adjacencies (could be semantic or contextual)
 
