@@ -1,10 +1,17 @@
 import os
-import requests
+try:
+    import requests
+except Exception:
+    requests = None
 
 def fetch_images_from_serpapi(token, glyph, max_results=3):
     api_key = os.getenv("SERPAPI_API_KEY")
     if not api_key:
-        raise ValueError("SERPAPI_API_KEY not found.")
+        print("[ImageSearch] SERPAPI_API_KEY not found.")
+        return []
+    if not requests:
+        print("[ImageSearch] requests library not available.")
+        return []
 
     query = build_symbolic_query(token, glyph)
 
@@ -16,8 +23,12 @@ def fetch_images_from_serpapi(token, glyph, max_results=3):
         "api_key": api_key
     }
 
-    response = requests.get("https://serpapi.com/search", params=params)
-    response.raise_for_status()
+    try:
+        response = requests.get("https://serpapi.com/search", params=params)
+        response.raise_for_status()
+    except Exception as e:
+        print(f"[ImageSearch] Error fetching images: {e}")
+        return []
 
     results = []
     data = response.json()
@@ -31,12 +42,15 @@ def fetch_images_from_serpapi(token, glyph, max_results=3):
         if not image_url:
             continue
 
-        image_response = requests.get(image_url)
-        if image_response.status_code == 200:
-            image_path = os.path.join(image_dir, f"{token}_img_{i}.jpg")
-            with open(image_path, "wb") as f:
-                f.write(image_response.content)
-            results.append(image_path)
+        try:
+            image_response = requests.get(image_url)
+            if image_response.status_code == 200:
+                image_path = os.path.join(image_dir, f"{token}_img_{i}.jpg")
+                with open(image_path, "wb") as f:
+                    f.write(image_response.content)
+                results.append(image_path)
+        except Exception as e:
+            print(f"[ImageSearch] Error downloading image: {e}")
 
     return results
 

@@ -1,9 +1,17 @@
-import numpy as np
-import matplotlib.pyplot as plt
-import scipy.io.wavfile as wav
+try:
+    import numpy as np
+    import matplotlib.pyplot as plt
+    import scipy.io.wavfile as wav
+except Exception:
+    np = None
+    plt = None
+    wav = None
 import os
 
 def generate_fft_from_audio(audio_path, fft_data_path, fft_image_path):
+    if not (np and plt and wav):
+        print("[FFT] Required libraries not available. Skipping FFT generation.")
+        return
     try:
         print(f"[FFT] Processing FFT from audio: {audio_path}")
 

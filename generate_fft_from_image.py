@@ -1,11 +1,19 @@
 # generate_fft_from_image.py
 
 import os
-import numpy as np
-from PIL import Image
-import matplotlib.pyplot as plt
+try:
+    import numpy as np
+    from PIL import Image
+    import matplotlib.pyplot as plt
+except Exception:
+    np = None
+    Image = None
+    plt = None
 
 def generate_fft_from_image(image_path, output_dir="modalities/fft_visual"):
+    if not (np and Image and plt):
+        print("[FFT] Required libraries not available. Skipping image FFT.")
+        return None
     print(f"[FFT] Generating FFT from image: {image_path}")
     
     if not os.path.exists(output_dir):

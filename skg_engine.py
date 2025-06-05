@@ -1,13 +1,19 @@
 import json
+import os
 from datetime import datetime
 import random
 
 class SKGEngine:
     def __init__(self, memory_path):
         self.memory_path = memory_path
-        self.glyph_pool = []  # Holds available glyphs
-        self.token_map = {}  # Maps tokens to glyphs
-        self.adjacency_map = {}  # Maps tokens to their adjacencies (could be semantic or contextual)
+        os.makedirs(self.memory_path, exist_ok=True)
+        self.glyph_pool_file = os.path.join(self.memory_path, "glyph_pool.json")
+        self.token_map_file = os.path.join(self.memory_path, "token_map.json")
+        self.adjacency_map_file = os.path.join(self.memory_path, "adjacency_map.json")
+
+        self.glyph_pool = self._load_json(self.glyph_pool_file, self._load_default_pool())
+        self.token_map = self._load_json(self.token_map_file, {})
+        self.adjacency_map = self._load_json(self.adjacency_map_file, {})
 
     def update_glyph_weight(self, glyph):
         """Increment symbolic weight for existing glyph or initialize if absent."""
@@ -34,6 +40,8 @@ class SKGEngine:
 
         # Update the glyph's weight
         glyph = self.update_glyph_weight(glyph)
+        self.token_map[token] = glyph
+        self._save_json(self.token_map_file, self.token_map)
         return glyph
 
 
@@ -85,7 +93,31 @@ class SKGEngine:
     def update_adjacency_map(self, token, adjacencies):
         """Update the adjacency map for a given token."""
         self.adjacency_map[token] = adjacencies
+        self._save_json(self.adjacency_map_file, self.adjacency_map)
 
     def add_glyph_to_pool(self, glyph):
         """Add a new glyph to the glyph pool."""
         self.glyph_pool.append(glyph)
+        self._save_json(self.glyph_pool_file, self.glyph_pool)
+
+    # --- Persistence Helpers ---
+    def _load_default_pool(self):
+        path = os.path.join(os.path.dirname(__file__), "extended_glyph_pool.json")
+        with open(path, "r", encoding="utf-8") as f:
+            return json.load(f)
+
+    def _load_json(self, path, default):
+        if os.path.exists(path):
+            try:
+                with open(path, "r", encoding="utf-8") as f:
+                    return json.load(f)
+            except Exception:
+                pass
+        return default
+
+    def _save_json(self, path, data):
+        try:
+            with open(path, "w", encoding="utf-8") as f:
+                json.dump(data, f, indent=2)
+        except Exception as e:
+            print(f"[SKGEngine] Failed to save {path}: {e}")

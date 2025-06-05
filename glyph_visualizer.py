@@ -1,6 +1,11 @@
 # glyph_visualizer.py
 import os
-from PIL import Image, ImageDraw, ImageFont
+try:
+    from PIL import Image, ImageDraw, ImageFont
+except Exception:
+    Image = None
+    ImageDraw = None
+    ImageFont = None
 import hashlib
 from datetime import datetime
 
@@ -8,6 +13,9 @@ def generate_glyph_image(token, output_dir="modalities/images", font_path="../Sy
     """
     Generate and save an image of a glyph corresponding to the given token.
     """
+    if not Image:
+        print("[GlyphVisualizer] PIL not available. Skipping glyph image.")
+        return None
     print(f"[GlyphVisualizer] Generating glyph image for: {token}")
 
     # Generate a hash for the token to create a unique filename

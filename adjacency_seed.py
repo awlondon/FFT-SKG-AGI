@@ -1,10 +1,18 @@
-from openai import OpenAI
 import os
 import json
 
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+try:
+    from openai import OpenAI
+    openai_key = os.getenv("OPENAI_API_KEY")
+    client = OpenAI(api_key=openai_key) if openai_key else None
+except Exception:
+    OpenAI = None
+    client = None
 
 def generate_adjacents(token, top_k=5):
+    if not client:
+        print("[AdjacencySeed] OpenAI client unavailable. Returning empty list.")
+        return []
     try:
         prompt = f"List {top_k} semantically adjacent words or concepts to the term '{token}', in a JSON array."
 
