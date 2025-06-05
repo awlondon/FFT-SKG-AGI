@@ -52,7 +52,8 @@ def process_input(user_input):
     }
 
     # Simulate generating the glyph for the token (you may already have this elsewhere)
-    glyph = generate_glyph_image(token)  # Assuming this returns a glyph image or associated glyph info
+    # The glyph_visualizer module resolves Symbola.ttf from the project root
+    glyph = generate_glyph_image(token)
 
     # Now you call the process_agency_gates with the token_data
     decisions = process_agency_gates(token, token_data)
