@@ -3,6 +3,7 @@ import os
 from PIL import Image, ImageDraw, ImageFont
 import hashlib
 from datetime import datetime
+import re
 
 def generate_glyph_image(token, output_dir="modalities/images", font_path="../Symbola.ttf"):
     """
@@ -12,7 +13,13 @@ def generate_glyph_image(token, output_dir="modalities/images", font_path="../Sy
 
     # Generate a hash for the token to create a unique filename
     hash_id = hashlib.sha1(token.encode()).hexdigest()[:8]
-    image_path = os.path.join(output_dir, f"{token}_{hash_id}_sigil.png")
+
+    # Sanitize the token to avoid unsupported filesystem characters
+    safe_token = re.sub(r"[^a-zA-Z0-9_-]", "_", token)
+
+    # Build the final path using the sanitized token
+    image_filename = f"{safe_token}_{hash_id}_sigil.png"
+    image_path = os.path.join(output_dir, image_filename)
     os.makedirs(output_dir, exist_ok=True)
 
     width, height = 512, 512
