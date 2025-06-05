@@ -103,19 +103,22 @@ class SKGEngine:
         return random.choice(self.glyph_pool) if self.glyph_pool else "□"
 
     def get_adjacencies_for_token(self, token):
-        return self.adjacency_map.get(token, [])
+        return self.adjacency_map.get(token, {})
 
     def update_adjacency_map(self, token, adjacencies):
-        self.adjacency_map[token] = adjacencies
+        """Support both list-style and dict-style adjacents."""
+        mapping = self.adjacency_map.setdefault(token, {})
         for adj in adjacencies:
-            self.graph.connect("global", token, adj)
+            adj_token = adj.get("token", adj) if isinstance(adj, dict) else adj
+            weight = adj.get("weight", 1) if isinstance(adj, dict) else 1
+            mapping[adj_token] = mapping.get(adj_token, 0) + weight
+            self.graph.connect("global", token, adj_token)
         self.save_state()
 
     def recursive_thought_loop(self, token, depth=0, max_depth=5, parent=None):
         if depth >= max_depth:
             return []
 
-        # Log if this is a new symbolic expansion from a known parent
         if token not in self.token_map and parent is not None:
             origin_glyph = self.token_map.get(parent)
             self.thought_tracker.log_expansion(parent, token, origin_glyph)
@@ -130,20 +133,20 @@ class SKGEngine:
             self.thought_tracker.reset()
             return [current_glyph]
 
-        adjacencies = self.get_adjacencies_for_token(token)
-        self.thought_tracker.log_convergence([token] + adjacencies, len(adjacencies), 0)
+        adjacents = self.get_adjacencies_for_token(token)
+        self.thought_tracker.log_convergence([token] + list(adjacents.keys()), len(adjacents), 0)
         result = [current_glyph]
 
-        for slot_index, adjacent_token in enumerate(adjacencies):
-            self.thought_tracker.log_adjacency(token, adjacent_token, slot_index, weight_delta=1)
-            result.extend(self.recursive_thought_loop(adjacent_token, depth + 1, max_depth, parent=token))
+        for slot_index, adj_token in enumerate(adjacents.keys()):
+            self.thought_tracker.log_adjacency(token, adj_token, slot_index, weight_delta=adjacents[adj_token])
+            result.extend(self.recursive_thought_loop(adj_token, depth + 1, max_depth, parent=token))
 
         return result
 
     def evaluate_agency_gate(self, token):
         glyph = self.token_map.get(token, {})
         weight = glyph.get("modalities", {}).get("text", {}).get("weight", 1)
-        adj_count = len(self.adjacency_map.get(token, []))
+        adj_count = len(self.adjacency_map.get(token, {}))
         token_data = {"frequency": weight, "weight": weight}
         decisions = process_agency_gates(token, token_data, adj_count)
         for d in decisions:
@@ -159,3 +162,19 @@ class SKGEngine:
 
     def traverse_superknowledge(self, start_token, steps=5):
         return self.graph.traverse(start_token, max_steps=steps)
+
+    def generate_space_field(self, token, radius=1.0):
+        """Generate a basic spatial layout for a token's adjacents."""
+        from hlsf_adapter import generate_vertices
+
+        field = {token: (0.0, 0.0)}
+        adjacents = self.get_adjacencies_for_token(token)
+        adjacency_tokens = list(adjacents.keys())
+
+        sides = max(len(adjacency_tokens), 1)
+        vertices = generate_vertices((0.0, 0.0), radius, sides)
+
+        for idx, adj_token in enumerate(adjacency_tokens):
+            field[adj_token] = vertices[idx % sides]
+
+        return field
