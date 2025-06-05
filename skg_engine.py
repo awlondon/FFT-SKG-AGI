@@ -3,9 +3,17 @@ from datetime import datetime
 import random
 
 class SKGEngine:
-    def __init__(self, memory_path):
+    def __init__(self, memory_path, glyph_pool_path="glossary/extended_glyph_pool.json"):
+        """Initialize SKGEngine with memory path and load glyph pool."""
         self.memory_path = memory_path
-        self.glyph_pool = []  # Holds available glyphs
+        # Load glyphs from provided path for use in the engine
+        try:
+            with open(glyph_pool_path, "r", encoding="utf-8") as f:
+                self.glyph_pool = json.load(f)
+        except Exception as e:
+            print(f"[SKGEngine] Failed to load glyph pool from {glyph_pool_path}: {e}")
+            self.glyph_pool = []
+        
         self.token_map = {}  # Maps tokens to glyphs
         self.adjacency_map = {}  # Maps tokens to their adjacencies (could be semantic or contextual)
 
