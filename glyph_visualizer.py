@@ -6,22 +6,24 @@ import hashlib
 from PIL import Image, ImageDraw, ImageFont
 from datetime import datetime
 
-def generate_glyph_image(token, output_dir="modalities/images", font_path="../Symbola.ttf"):
+# Resolve the project root and set default font path
+ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
+DEFAULT_FONT_PATH = os.path.join(ROOT_DIR, "Symbola.ttf")
+
+def generate_glyph_image(token, output_dir="modalities/images", font_path=DEFAULT_FONT_PATH):
     """
     Generate and save an image of a glyph corresponding to the given token.
     """
     print(f"[GlyphVisualizer] Generating glyph image for: {token}")
 
-    # Generate a hash for uniqueness
+    # Create a hashed and sanitized filename
     hash_id = hashlib.sha1(token.encode()).hexdigest()[:8]
-
-    # Sanitize token for filename safety
     safe_token = re.sub(r"[^a-zA-Z0-9_-]", "_", token)
     image_filename = f"{safe_token}_{hash_id}_sigil.png"
     image_path = os.path.join(output_dir, image_filename)
     os.makedirs(output_dir, exist_ok=True)
 
-    # Image and font setup
+    # Image configuration
     width, height = 512, 512
     background_color = "white"
     text_color = "black"
@@ -63,7 +65,7 @@ def externalize_token(token, token_data, output_dir="modalities/images"):
         print(f"[GlyphVisualizer] Failed to externalize token: {token}")
 
 if __name__ == "__main__":
-    # Example manual invocation (normally called from agency gate system)
+    # Example manual invocation (normally triggered from SKGEngine)
     token_data = {
         "token": "truth",
         "frequency": 5,
