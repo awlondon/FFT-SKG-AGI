@@ -68,9 +68,12 @@ def externalize_token(token, token_data, output_dir="modalities/images"):
         print(f"[GlyphVisualizer] Failed to externalize token: {token}")
 
 if __name__ == "__main__":
+    # Example usage:
     token_data = {
-        "token": "truth",
-        "frequency": 5,
-        "weight": 10
+        "token": "truth",     # Token name
+        "frequency": 5,       # Frequency for agency gate decisions
+        "weight": 10          # Symbolic weight for prioritization
     }
+
+    # This would typically be triggered from agency gate decisions in the recursive process
     externalize_token(token_data["token"], token_data)
