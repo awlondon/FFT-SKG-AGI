@@ -10,16 +10,18 @@ from fft_generator import generate_signal_fft_image_for_token
 from glyph_utils import BASE_DIR, DEFAULT_GLYPH, generate_fft_image_for_token
 from relationship_types import RELATIONSHIP_TYPES
 from symbolic_constants import GLYPH_IMAGE_SIZE
+from skg_thought_tracker import SKGThoughtTracker
 
 
 class TokenUtils:
-    def __init__(self):
+    def __init__(self, thought_tracker=None):
         self.base_dir = BASE_DIR
         self.token_counter = 1
         self.token_map = {}
         self.id_map = {}
         self.token_freq = {}
         self.initialize()  # Initialize the token maps and frequency tracker
+        self.thought_tracker = thought_tracker or SKGThoughtTracker()
         from emergent_token_utils import EmergentTokenTracker
         from agency_gate_manager import AgencyGateManager
         from glyph_decision_engine import AGIDecidor
@@ -214,9 +216,9 @@ class TokenUtils:
                 return json.load(f)
         return {}
 
-    def recursive_walk(self, token_id, depth=0, max_depth=10, visited=None):
+    def recursive_walk(self, token_id, depth=0, max_depth=10, visited=None, parent=None):
         """
-        Recursively traverse token adjacency slots with agency-based decisions.
+        Recursively traverse token adjacency slots with agency-based decisions while logging symbolic cognition.
         Prevents infinite recursion by maintaining a set of visited tokens.
         """
         from glyph_utils import get_glyph_for_token, process_glyph_impression
@@ -229,12 +231,17 @@ class TokenUtils:
 
         visited.add(token_id)  # Mark the current token as visited
 
+        if token_id not in self.id_map and parent is not None:
+            self.thought_tracker.log_expansion(parent, token_id, None)
+
         token_data = self.load_token_data(token_id)
         glyph = get_glyph_for_token(token_id)
         if glyph:
             process_glyph_impression(glyph)  # Log the glyph
+        self.thought_tracker.log_thought_loop(token_id, depth, [glyph] if glyph else [], False)
 
         slots = token_data.get("s", {})  # Get sigil slots
+        self.thought_tracker.log_convergence([token_id] + list(slots.keys()), len(slots), len(slots))
 
         for slot_id in sorted(slots.keys()):  # Traverse each slot
             adj_map = slots[slot_id].get("a", {})  # Adjacency map for the slot
@@ -251,13 +258,17 @@ class TokenUtils:
                 if candidate_glyph:
                     process_glyph_impression(candidate_glyph)
 
+                self.thought_tracker.log_adjacency(token_id, candidate_token, slot_id, weight_delta=weight)
+                if candidate_token not in self.id_map:
+                    self.thought_tracker.log_expansion(token_id, candidate_token, candidate_glyph)
+
                 # Make an agency-based decision
                 if not self.gate_decision("continue_slot", candidate_token):
                     continue
 
                 decision = self.agency_binary_decision(token_id, candidate_token, slot_id, weight, depth)
-                if decision:  # If the decision is to continue
-                    self.recursive_walk(candidate_token, depth + 1, max_depth, visited)
+                if decision:
+                    self.recursive_walk(candidate_token, depth + 1, max_depth, visited, parent=token_id)
 
     def agency_binary_decision(self, current_token, candidate_token, slot_id, weight, depth):
         """
@@ -525,3 +536,4 @@ class TokenUtils:
         self.process_gate_triggered_behavior("react_to_audio", token_id)
         self.stream_to_visualizer(self.id_map[token_id], token_id)
         self.append_to_output_stream(token_id)
+        self.thought_tracker.reset()

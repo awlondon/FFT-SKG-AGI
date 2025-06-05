@@ -40,6 +40,9 @@ def generate_modalities(token, glyph_id):
     # --- IMAGE SEARCH ---
     fetched_images = fetch_images_from_serpapi(token, glyph_id, max_results=3)
 
+    # --- TEXTUAL/ASCII REPRESENTATION ---
+    ascii_art = f"<{token.upper()}>"
+
     return {
         "text": {
             "weight": 1
@@ -53,5 +56,8 @@ def generate_modalities(token, glyph_id):
             "photographic": fetched_images,
             "symbolic_image": symbolic_image_path,
             "fft_from_image": fft_from_image_path
+        },
+        "extra": {
+            "ascii_art": ascii_art
         }
     }
