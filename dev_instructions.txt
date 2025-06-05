@@ -1,0 +1,77 @@
+FFT-SKG-AGI Development Notes
+============================
+
+Overview
+--------
+This repository experiments with a symbolic knowledge engine that assigns
+unique glyphs to input tokens and generates multimedia representations
+for them.  The modules interact to fetch semantic adjacencies, pick a
+glyph, synthesize speech, compute FFTs, and search for related images.
+
+Module Relationships
+--------------------
+- **adjacency_seed.py** – Queries GPT to obtain words or concepts
+  semantically adjacent to a token.  Results feed into glyph selection.
+- **glyph_decision_engine.py** – Uses GPT with a pool of unicode glyphs
+  (expected in `glossary/extended_glyph_pool.json`) to choose the most
+  fitting glyph for a token.
+- **glyph_builder.py** – Orchestrates glyph creation for unseen tokens:
+  calls `generate_adjacents`, chooses a glyph, generates all modalities
+  (audio, FFT, images) and stores a glyph object.
+- **modalities.py** – Produces and stores audio TTS output, FFT images
+  for audio and for the glyph image, and downloads photographs using
+  SerpAPI.
+- **glyph_visualizer.py** – Creates a symbolic image (sigil) for a glyph
+  using Pillow and also contains a sample `externalize_token` helper.
+- **fft_generator.py** and **generate_fft_from_image.py** – Compute FFT
+  spectra from audio files and images respectively.
+- **image_search.py** – Fetches photographs from SerpAPI based on a
+  symbolic query built from the token and glyph.
+- **tts_engine.py** – Simple offline text‑to‑speech generation with
+  `pyttsx3`.
+- **agency_gate.py** – Applies rudimentary gate decisions (explore,
+  reevaluate, externalize, prune) to guide processing of a token.
+- **skg_engine.py** – Skeleton engine managing tokens, glyph weights,
+  adjacency maps and recursion through tokens.
+- **main.py** – Minimal CLI loop creating required directories,
+  initializing `SKGEngine`, and invoking gate processing for user
+  supplied tokens.
+
+Improvement Ideas
+-----------------
+1. **Error Handling & Config** – Many modules assume environment
+   variables or data files exist. Provide clear configuration loading and
+   graceful fallbacks when `OPENAI_API_KEY`, `SERPAPI_API_KEY`, or the
+   glyph pool file are absent.  Consider caching or memoizing API calls.
+2. **Data Persistence** – `glyph_memory` JSON files are written but not
+   reloaded in the engine.  Implement consistent load/save utilities and
+   maintain a persistent glyph index.
+3. **SKGEngine Logic** – Current selection and gating logic use random
+   choices.  Expand `select_glyph_for_token` to leverage adjacencies and
+   token history, and refine `evaluate_agency_gate` with real criteria
+   (frequency, weight, depth etc.).
+4. **Adjacency Expansion** – Build local storage of adjacencies so that
+   repeated tokens do not re‑query OpenAI.  Consider offline NLP models
+   to supplement GPT.
+5. **Modalities Pipeline** – Parallelize long running operations (TTS,
+   FFT generation, image search).  Add options to skip expensive steps.
+6. **Testing & Documentation** – Create a README describing setup,
+   dependencies (`pyttsx3`, `numpy`, `Pillow`, etc.) and usage.  Add unit
+   tests, especially for parsing GPT responses and agency gate behavior.
+7. **Directory Layout** – Include missing folders (`glossary/`,
+   `modalities/`) in the repo with placeholder files or README to clarify
+   expected structure.
+8. **CLI or API** – Expand `main.py` into a richer command line or web
+   interface that loads existing glyphs, displays modalities, and allows
+   iterative exploration of adjacencies.
+
+Development Roadmap
+-------------------
+- Ensure `extended_glyph_pool.json` is provided and loaded correctly.
+- Implement persistence of `SKGEngine` state across runs.
+- Replace random gating with a more deterministic policy or a learned
+  model.
+- Consider asynchronous task execution for modality generation.
+- Expand image/glyph visualization options (e.g., color, overlay text).
+- Add unit tests and continuous integration to verify functionality.
+
