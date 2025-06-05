@@ -1,0 +1,7 @@
+openai
+pyttsx3
+Pillow
+matplotlib
+numpy
+scipy
+requests
