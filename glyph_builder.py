@@ -5,12 +5,12 @@ from adjacency_seed import generate_adjacents
 from modalities import generate_modalities
 from glyph_decision_engine import choose_glyph_for_token
 
-def build_glyph_if_needed(token, path):
+def build_glyph_if_needed(token, path, adj_count: int = 50):
     print(f"[GlyphBuilder] Building glyph for unknown token: '{token}'")
     now = datetime.utcnow().isoformat() + "Z"
 
     # Step 1: Generate adjacents first (required for glyph decision)
-    adjacents = generate_adjacents(token)
+    adjacents = generate_adjacents(token, top_k=adj_count)
 
     # Step 2: Choose glyph based on token and adjacents
     glyph_id = choose_glyph_for_token(token, adjacents)
