@@ -157,7 +157,11 @@ PROTO_SIGIL_TOKENS = [
 
 
 # Base font path for glyph rendering
-DEFAULT_GLYPH_FONT_PATH = "_fonts/Symbola.ttf"
+# Resolve the path to Symbola.ttf relative to the repository root so
+# it works regardless of the current working directory
+import os
+_REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DEFAULT_GLYPH_FONT_PATH = os.path.join(_REPO_ROOT, "Symbola.ttf")
 
 # Image sizes for glyph and FFT rendering
 GLYPH_IMAGE_SIZE = (512, 512)
