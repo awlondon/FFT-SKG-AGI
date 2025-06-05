@@ -1,6 +1,7 @@
 import json
 from datetime import datetime
 import random
+from skg_thought_tracker import SKGThoughtTracker
 
 class SKGEngine:
     def __init__(self, memory_path):
@@ -8,6 +9,7 @@ class SKGEngine:
         self.glyph_pool = []  # Holds available glyphs
         self.token_map = {}  # Maps tokens to glyphs
         self.adjacency_map = {}  # Maps tokens to their adjacencies (could be semantic or contextual)
+        self.thought_tracker = SKGThoughtTracker()
 
     def update_glyph_weight(self, glyph):
         """Increment symbolic weight for existing glyph or initialize if absent."""
@@ -48,26 +50,36 @@ class SKGEngine:
         """Get the adjacency list for a token. Can be expanded to semantic adjacencies."""
         return self.adjacency_map.get(token, [])
 
-    def recursive_thought_loop(self, token, depth=0, max_depth=5):
-        """Perform a recursive exploration of a token's adjacencies, activating agency gates."""
+    def recursive_thought_loop(self, token, depth=0, max_depth=5, parent=None):
+        """Perform a recursive exploration of a token's adjacencies while logging symbolic cognition."""
         if depth >= max_depth:
             return []
 
+        # Expansion logging if this token is new
+        if token not in self.token_map and parent is not None:
+            origin_glyph = self.token_map.get(parent)
+            self.thought_tracker.log_expansion(parent, token, origin_glyph)
+
         # Assign the glyph for the current token
         current_glyph = self.assign_glyph_to_token(token)
+        self.thought_tracker.log_thought_loop(token, depth, [current_glyph], False)
 
         # Check agency gates (e.g., should we explore further or prune?)
         agency_gate_decision = self.evaluate_agency_gate(token)
         if agency_gate_decision == 'externalize':
             self.externalize_token(token)
-            return [current_glyph]  # Return the glyph if it's externalized
+            self.thought_tracker.log_thought_loop(token, depth, [current_glyph], True)
+            self.thought_tracker.reset()
+            return [current_glyph]
 
         # Otherwise, continue the recursive thought loop
         adjacencies = self.get_adjacencies_for_token(token)
+        self.thought_tracker.log_convergence([token] + adjacencies, len(adjacencies), 0)
         result = [current_glyph]
-        
-        for adjacent_token in adjacencies:
-            result.extend(self.recursive_thought_loop(adjacent_token, depth + 1, max_depth))
+
+        for slot_index, adjacent_token in enumerate(adjacencies):
+            self.thought_tracker.log_adjacency(token, adjacent_token, slot_index, weight_delta=1)
+            result.extend(self.recursive_thought_loop(adjacent_token, depth + 1, max_depth, parent=token))
 
         return result
 
