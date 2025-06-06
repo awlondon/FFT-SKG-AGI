@@ -3,12 +3,22 @@
 import os
 import re
 import hashlib
+import sys
 from PIL import Image, ImageDraw, ImageFont
 from datetime import datetime
 
-# Default font path, resolved from script location
-ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
-DEFAULT_FONT_PATH = os.path.join(ROOT_DIR, "Symbola.ttf")
+# Default font path. Prefer the directory containing main.py so running the
+# program from any working directory still resolves the font correctly.
+if getattr(sys.modules.get("__main__"), "__file__", None):
+    MAIN_DIR = os.path.dirname(os.path.abspath(sys.modules["__main__"].__file__))
+else:
+    MAIN_DIR = os.path.dirname(os.path.abspath(__file__))
+
+# Try loading Symbola from alongside main.py, falling back to this file's
+# location.
+DEFAULT_FONT_PATH = os.path.join(MAIN_DIR, "Symbola.ttf")
+if not os.path.exists(DEFAULT_FONT_PATH):
+    DEFAULT_FONT_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "Symbola.ttf")
 
 def generate_glyph_image(token, output_dir="modalities/images", font_path=None):
     """
