@@ -39,12 +39,35 @@ class SKGEngine:
                 self.glyph_pool = json.load(f)
 
     def _load_state(self):
-        # Optional: Implement persistent token/glyph state if desired
-        pass
+        token_path = os.path.join(self.memory_path, "token_map.json")
+        adj_path = os.path.join(self.memory_path, "adjacency_map.json")
+        if os.path.exists(token_path):
+            try:
+                with open(token_path, "r", encoding="utf-8") as f:
+                    self.token_map = json.load(f)
+            except Exception:
+                self.token_map = {}
+        if os.path.exists(adj_path):
+            try:
+                with open(adj_path, "r", encoding="utf-8") as f:
+                    self.adjacency_map = json.load(f)
+            except Exception:
+                self.adjacency_map = {}
 
     def save_state(self):
-        # Optional: Save current token_map, adjacency_map, etc.
-        pass
+        os.makedirs(self.memory_path, exist_ok=True)
+        token_path = os.path.join(self.memory_path, "token_map.json")
+        adj_path = os.path.join(self.memory_path, "adjacency_map.json")
+        try:
+            with open(token_path, "w", encoding="utf-8") as f:
+                json.dump(self.token_map, f, indent=2)
+        except Exception:
+            pass
+        try:
+            with open(adj_path, "w", encoding="utf-8") as f:
+                json.dump(self.adjacency_map, f, indent=2)
+        except Exception:
+            pass
 
     def update_glyph_weight(self, glyph):
         if not isinstance(glyph, dict):
