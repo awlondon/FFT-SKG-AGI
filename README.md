@@ -69,26 +69,28 @@ This renders relationships between tokens, agency gates, and decisions based on 
 🖋️ Using Symbola for Unicode Glyphs
 Some features rely on the Symbola font to properly render advanced Unicode glyphs (e.g. 🜂, ⚚, 🜁).
 
-🔽 Download Instructions
-Download Symbola.ttf from a trusted source like Font Library.
+### Download Instructions
+Download `Symbola.ttf` from a trusted source like Font Library and place it in a known directory:
 
-Place it in a known directory, e.g.:
-
-bash
-Copy
-Edit
+```bash
 mkdir _fonts
 mv /path/to/Symbola.ttf _fonts/
-🧱 Usage Example
-To generate a glyph image using the font:
+```
 
-python
-Copy
-Edit
+Set the `SYMBOLA_FONT_PATH` environment variable to the location of your font if
+it is not in the project root. The engine will also check the `_fonts/`
+directory automatically.
+
+### Usage Example
+To generate a glyph image using the font directly:
+
+```python
 from glyph_visualizer import generate_glyph_image
 
 image_path = generate_glyph_image("🜂", font_path="_fonts/Symbola.ttf")
-If no font_path is given and the default path fails, it falls back to a generic system font via Pillow.
+```
+If no `font_path` is given and the default path fails, it falls back to a
+generic system font via Pillow.
 
 🔧 Requirements
 Install dependencies with:

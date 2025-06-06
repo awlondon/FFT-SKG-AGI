@@ -14,11 +14,24 @@ if getattr(sys.modules.get("__main__"), "__file__", None):
 else:
     MAIN_DIR = os.path.dirname(os.path.abspath(__file__))
 
-# Try loading Symbola from alongside main.py, falling back to this file's
-# location.
-DEFAULT_FONT_PATH = os.path.join(MAIN_DIR, "Symbola.ttf")
-if not os.path.exists(DEFAULT_FONT_PATH):
-    DEFAULT_FONT_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "Symbola.ttf")
+# Resolve the path to Symbola.ttf.
+# 1. `SYMBOLA_FONT_PATH` environment variable has highest priority.
+# 2. Symbola.ttf in the directory containing main.py.
+# 3. Symbola.ttf in a `_fonts/` folder next to main.py.
+# 4. Symbola.ttf next to this file.
+env_font = os.environ.get("SYMBOLA_FONT_PATH")
+if env_font and os.path.exists(env_font):
+    DEFAULT_FONT_PATH = env_font
+else:
+    DEFAULT_FONT_PATH = os.path.join(MAIN_DIR, "Symbola.ttf")
+    if not os.path.exists(DEFAULT_FONT_PATH):
+        alt_path = os.path.join(MAIN_DIR, "_fonts", "Symbola.ttf")
+        if os.path.exists(alt_path):
+            DEFAULT_FONT_PATH = alt_path
+        else:
+            alt_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "Symbola.ttf")
+            if os.path.exists(alt_path):
+                DEFAULT_FONT_PATH = alt_path
 
 def generate_glyph_image(token, output_dir="modalities/images", font_path=None):
     """
