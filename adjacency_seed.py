@@ -109,4 +109,4 @@ def _format_adjacents(adj_list: list[str], source: str = "GPT") -> list[dict]:
             "source": source,
         }
         for adj in adj_list if isinstance(adj, str)
-    
+    ]
