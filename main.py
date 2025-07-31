@@ -3,6 +3,9 @@ import json
 from skg_engine import SKGEngine
 import config
 from glyph_builder import build_glyph_if_needed
+from token_fusion import TokenFusion
+
+fusion = TokenFusion()
 from agency_gate import process_agency_gates  # noqa: F401  # imported for side effects
 from tts_engine import speak
 from stt_engine import transcribe_speech
@@ -26,17 +29,19 @@ os.makedirs(data_path, exist_ok=True)
 
 
 def load_or_create_glyph(token: str) -> dict:
-    glyph_path = os.path.join(data_path, f"{token}.json")
+    token_id = fusion.fuse_token(token)
+    glyph_path = os.path.join(data_path, f"{token_id}.json")
     if os.path.exists(glyph_path):
         with open(glyph_path, 'r', encoding='utf-8') as f:
             return json.load(f)
     else:
-        glyph = build_glyph_if_needed(token, glyph_path, adj_count=50)
+        glyph = build_glyph_if_needed(token, data_path, adj_count=50)
         return glyph
 
 
 def save_glyph(glyph: dict) -> None:
-    glyph_path = os.path.join(data_path, f"{glyph['token']}.json")
+    token_id = fusion.fuse_token(glyph['token'])
+    glyph_path = os.path.join(data_path, f"{token_id}.json")
     try:
         with open(glyph_path, 'w', encoding='utf-8') as f:
             json.dump(glyph, f, indent=2)
