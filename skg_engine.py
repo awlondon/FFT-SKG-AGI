@@ -4,6 +4,8 @@ import random
 from datetime import datetime
 from typing import Optional, List
 
+from engine_comm import write_message, subscribe_to_stream
+
 from superknowledge_graph import SuperKnowledgeGraph
 from agency_gate import process_agency_gates
 from skg_thought_tracker import SKGThoughtTracker
@@ -25,11 +27,17 @@ class SKGEngine:
         Optional path to a JSON file containing a list of unicode glyphs to
         select from.  If omitted or invalid a default pool containing a
         single placeholder glyph ("□") is used.
+    comm_enabled : bool, optional
+        If True the engine will broadcast externalized tokens to a stream file
+        and process tokens received from subscribed engines.
     """
 
-    def __init__(self, memory_path: str, glyph_path: Optional[str] = "glossary/extended_glyph_pool.json"):
+    def __init__(self, memory_path: str, glyph_path: Optional[str] = "glossary/extended_glyph_pool.json", comm_enabled: bool = False):
         self.memory_path = memory_path
         self.glyph_list_path = glyph_path
+        self.comm_enabled = comm_enabled
+        self.comm_out_file = os.path.join(self.memory_path, "engine_stream.jsonl")
+        self._subscriptions: list = []
         self.token_map: dict[str, dict] = {}
         self.adjacency_map: dict[str, dict[str, int]] = {}
         self.glyph_pool: List[str] = []
@@ -47,6 +55,17 @@ class SKGEngine:
         os.makedirs(self.log_dir, exist_ok=True)
         self.adj_log = os.path.join(self.log_dir, "adjacency_walk.log")
         self.weight_log = os.path.join(self.log_dir, "weight_updates.log")
+
+    def enable_communication(self, enabled: bool = True) -> None:
+        """Toggle engine-to-engine communication."""
+        self.comm_enabled = enabled
+
+    def subscribe_to_engine(self, stream_path: str) -> None:
+        """Subscribe to another engine's output stream."""
+        if not self.comm_enabled:
+            return
+        t = subscribe_to_stream(stream_path, lambda tok: self.recursive_thought_loop(tok))
+        self._subscriptions.append(t)
 
     def _log(self, log_path: str, entry: dict) -> None:
         """Append a JSON log entry to the specified file."""
@@ -243,6 +262,8 @@ class SKGEngine:
         weight = glyph.get("modalities", {}).get("text", {}).get("weight") if isinstance(glyph, dict) else None
         print(f"[SKGEngine] Externalizing '{token}' → '{display}' (weight: {weight if weight is not None else 'N/A'})")
         self.externalized_last = True
+        if self.comm_enabled:
+            write_message(self.comm_out_file, token, display)
 
     def add_glyph_to_pool(self, glyph: str) -> None:
         self.glyph_pool.append(glyph)

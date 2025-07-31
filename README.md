@@ -85,6 +85,12 @@ python main.py
 
 Interactively enter tokens or use `voice` input. Modalities are generated, logged, and visualized (if enabled). Type `exit` to quit.
 
+### Engine-to-Engine Communication
+
+`config.py` contains options to broadcast externalized tokens to a file based stream and to subscribe to another engine's stream. When `ENABLE_ENGINE_COMM` is set to `True`, each externalized token is appended as a JSON line to `engine_stream.jsonl` in the engine's memory directory. Setting `SUBSCRIBE_STREAM` to the path of another engine's stream file will feed received tokens back into the local `recursive_thought_loop`.
+
+This mechanism allows multiple engines to share glyph streams without requiring a network stack and can be toggled in the forthcoming GUI.
+
 ### Rendering Graphs
 
 ```bash
