@@ -110,3 +110,4 @@ class SKGGUI:
         self.detail_text.delete("1.0", tk.END)
         self.detail_text.insert("1.0", json.dumps(glyph, indent=2))
 
+
