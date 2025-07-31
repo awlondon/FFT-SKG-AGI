@@ -18,7 +18,7 @@ def process_agency_gates(token: str, token_data: dict, adjacency_count: int = 0)
         Number of adjacent tokens currently associated with this token.
     """
     print(f"[AgencyGate] Processing gates for token: {token}")
-    gates = ["explore", "reevaluate", "externalize", "prune"]
+    gates = ["explore", "reevaluate", "externalize", "prune", "expression"]
     decisions: list[dict] = []
     frequency = token_data.get("frequency", 1)
     weight = token_data.get("weight", 1)
@@ -53,6 +53,21 @@ def process_agency_gates(token: str, token_data: dict, adjacency_count: int = 0)
             decisions.append({
                 "gate": gate,
                 "decision": prune_decision,
+                "timestamp": datetime.utcnow().isoformat() + "Z"
+            })
+        elif gate == "expression":
+            speak_conf = min(1.0, 0.3 + (weight * 0.1))
+            gesture_conf = 1.0 - speak_conf
+            if speak_conf >= gesture_conf:
+                decision = "speak"
+                confidence = speak_conf
+            else:
+                decision = "gesture"
+                confidence = gesture_conf
+            decisions.append({
+                "gate": gate,
+                "decision": decision,
+                "confidence": round(confidence, 2),
                 "timestamp": datetime.utcnow().isoformat() + "Z"
             })
     return decisions

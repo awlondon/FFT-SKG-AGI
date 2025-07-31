@@ -22,7 +22,7 @@ The `SKGEngine` orchestrates:
 * Recursive token processing
 * Glyph-symbolic memory mapping
 * Modalities generation (voice, vision, frequency)
-* Agency gating (decisions on whether to speak, silence, or recurse)
+* Agency gating (decisions on whether to speak, gesture, silence, or recurse)
 
 This architecture is the core cognition engine behind real-time symbolic digital twins.
 
@@ -58,6 +58,17 @@ The system can be extended into a full real-time avatar with:
 
 * `glyph_memory/` stores token histories, glyph assignments, and agency gate traces
 * Logs are replayable for full thought loop reconstruction
+
+The agency gate also selects an **expression modality**. Tokens with higher
+confidence are spoken aloud, while low-confidence tokens trigger a gesture cue.
+For example:
+
+```python
+gate, modality, conf = engine.evaluate_agency_gate("hello")
+# ("externalize", "speak", 0.7)
+```
+A confidence below 0.5 yields `("gesture")`, which the GUI displays as a simple
+icon instead of speech.
 
 ---
 
