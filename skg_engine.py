@@ -33,20 +33,6 @@ class SKGEngine:
         and process tokens received from subscribed engines.
     """
 
-    def __init__(self, memory_path: str, glyph_path: Optional[str] = "glossary/extended_glyph_pool.json", comm_enabled: bool = False):
-        self.memory_path = memory_path
-        self.glyph_list_path = glyph_path
-        self.comm_enabled = comm_enabled
-        self.comm_out_file = os.path.join(self.memory_path, "engine_stream.jsonl")
-        self._subscriptions: list = []
-
-    binary : bool
-        If True, engine state will be serialized with ``pickle`` instead of
-        JSON.
-    encrypt_key : Optional[bytes]
-        Optional symmetric key used to XOR encrypt the persisted state.
-    """
-
     def __init__(
         self,
         memory_path: str,
@@ -54,7 +40,11 @@ class SKGEngine:
         *,
         binary: bool = False,
         encrypt_key: Optional[bytes] = None,
+        comm_enabled: bool = False,
     ):
+        self.comm_enabled = comm_enabled
+        self.comm_out_file = os.path.join(memory_path, "engine_stream.jsonl")
+        self._subscriptions: list = []
         self.memory_path = memory_path
         self.glyph_list_path = glyph_path
         self.binary = binary
