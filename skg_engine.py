@@ -8,7 +8,7 @@ from typing import Optional, List, Any
 from engine_comm import write_message, subscribe_to_stream
 
 from superknowledge_graph import SuperKnowledgeGraph
-from agency_gate import process_agency_gates
+from agency_gate import process_agency_gates, AgencyGateDecision
 from skg_thought_tracker import SKGThoughtTracker
 try:
     from tts_engine import speak
