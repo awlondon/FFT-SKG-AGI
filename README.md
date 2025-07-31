@@ -1,98 +1,162 @@
 # ⚙️ FFT-SKG‑AGI (Improved)
 
-This repository contains a lightweight symbolic cognition engine that maps
-incoming tokens to unicode glyphs, records adjacency relationships and
-generates multimodal representations such as audio, images and FFT
-visualizations.  The project is a sandbox for exploring recursive thought
-loops and emergent knowledge graphs while remaining self‑contained and
-offline friendly.
+This repository contains a symbolic cognition engine designed for real-time digital twin avatar creation. It maps incoming tokens to symbolic glyphs, generates multimodal FFT representations (audio, visual, semantic), and models recursive knowledge structures. Built for autonomy and offline capability, this system provides the foundation for real-time avatar cognition, expression, and symbolic memory.
 
-## 🧠 Overview
+---
 
-For each token you supply the engine will:
+## 🧠 System Overview
 
-- 🔹 Assign a unicode glyph selected deterministically from a pool.
-- 🔸 Record semantically adjacent tokens (either from an offline cache or
-  via OpenAI when available) and update an adjacency graph.
-- 🔺 Optionally externalize the token by producing a simple glyph image.
-- 📈 Log weight updates and adjacency traversals to JSONL files for later
-  visualization.
+Each token submitted to the engine initiates a recursive symbolic cognition cycle:
 
-The `SKGEngine` orchestrates thought loops, persistence and simple
-heuristic gating.  Audio synthesis, FFT generation and image search are
-implemented but disabled by default when dependencies or API keys are
-missing.
+* 🔹 **Assigns a Unicode Glyph** deterministically from a customizable pool.
+* 🔸 **Builds a Semantic Adjacency Graph** using cached data or OpenAI when enabled.
+* 🔺 **Generates Multimodal Outputs**: audio (TTS), FFT spectrum, glyph image, and visual embeddings.
+* 🧡 **Autonomous Adjacency Expansion**: the AGI recursively selects new tokens from adjacency graphs based on weighted or symbolic logic.
+* 🔭 **Triadic Expansions**: every token forms two radial branches by default, forming triads of mutual relationships.
+* 🪯 **Symbolic Relationships**: logical relationships (from a set of 50 core types) are assigned after triadic structures stabilize.
+* 🐽 **Processes Thought Loops** with gating logic to determine internalization or externalization.
+* 📈 **Logs Activity** to structured JSONL files for timeline replay, symbolic replay, and memory introspection.
+
+The `SKGEngine` orchestrates:
+
+* Recursive token processing
+* Glyph-symbolic memory mapping
+* Modalities generation (voice, vision, frequency)
+* Agency gating (decisions on whether to speak, silence, or recurse)
+
+This architecture is the core cognition engine behind real-time symbolic digital twins.
+
+---
+
+## 🧬 Digital Twin Avatar Features
+
+The system can be extended into a full real-time avatar with:
+
+### 🎧 Voice and Listening
+
+* Text-to-speech via `pyttsx3` for self-voicing avatars
+* Speech recognition for `voice` input commands using `speechrecognition`
+
+### 🎨 Visual Thought Representation
+
+* FFT image glyphs rendered from audio
+* Unicode glyph sigils with radial FFT overlays
+* `glyph_visualizer.py` for avatar display visuals
+
+### ♻️ Recursive Symbolic Thought
+
+* Every token processed forms a new symbolic node
+* Adjacents define semantic pathways and weight convergence
+* Autonomous recursion allows the AGI to choose whether to:
+
+  * Follow the highest-weighted connection (convergent logic)
+  * Explore lesser-weighted paths (divergent logic)
+* Each base token spawns two default adjacents, forming triadic symbolic patterns
+
+### 🧠 Agentic Memory
+
+* `glyph_memory/` stores token histories, glyph assignments, and agency gate traces
+* Logs are replayable for full thought loop reconstruction
+
+---
 
 ## 🚀 Getting Started
 
 ### Installation
 
-Install dependencies listed in `requirements.txt` (optionally using a
-virtual environment):
+Install with optional dependencies:
 
 ```bash
 pip install -r requirements.txt
 ```
 
-Optional dependencies include:
+**Optional packages:**
 
-- `openai` for generating semantic adjacents when the `OPENAI_API_KEY`
-  environment variable is set.
-- `requests` for image search via SerpAPI when `SERPAPI_API_KEY` is set.
-- `pyttsx3` for offline text‑to‑speech synthesis.
-- `speechrecognition` for optional voice input.
+* `openai` for GPT-style adjacents
+* `requests` for image search
+* `pyttsx3` for TTS
+* `speechrecognition` for STT
 
 ### Running the Engine
-
-Execute the CLI and enter tokens interactively:
 
 ```bash
 python main.py
 ```
 
-On first run it will create a `glyph_memory/` directory for persistence and
-subfolders under `modalities/` for generated assets.  Type tokens or
-`voice` to transcribe spoken input.  Type `exit` to quit.
+Interactively enter tokens or use `voice` input. Modalities are generated, logged, and visualized (if enabled). Type `exit` to quit.
 
-### Visualizing Logs
-
-The `graph_cli.py` script can render the adjacency graph and plot token
-weight histories:
+### Rendering Graphs
 
 ```bash
-python graph_cli.py --graph --out my_graph.png
-python graph_cli.py --token hello --out hello_weights.png
+python graph_cli.py --graph --out graph.png
+python graph_cli.py --token memory --out memory_weights.png
 ```
 
-## 🧾 Offline Data
+---
 
-- `glossary/extended_glyph_pool.json` – list of unicode glyphs used by
-  the engine.  Feel free to add or remove glyphs to customize the pool.
-- `offline_adjacency.json` – dictionary mapping tokens to a list of
-  pre‑computed adjacents.  Populating this file allows the engine to
-  operate without network access.
+## 📁 Directory Structure
 
-## 🛠️ Development Notes
+```
+FFT-SKG-AGI/
+├── main.py                # CLI engine runtime
+├── skg_engine.py          # Core symbolic cognition engine
+├── glyph_builder.py       # Glyph + modality generator
+├── agency_gate.py         # Symbolic decision logic
+├── modalities/            # Generated images, audio, FFTs
+├── glyph_memory/          # Logs and JSONL memory traces
+├── glossary/              # Extended glyph pools
+├── offline_adjacency.json # Semantic fallback adjacents
+├── tests/                 # Unit test suite
+```
 
-This improved version of FFT‑SKG‑AGI adds the following features:
+---
 
-1. **Deterministic glyph selection:** tokens are hashed into the glyph pool
-   for reproducible assignments.
-2. **Offline friendly:** all external dependencies are optional.  The
-   engine falls back to simple heuristics or cached data when APIs are
-   unavailable.
-3. **Graceful error handling:** network and I/O failures are caught and
-   reported without interrupting the thought loop.
-4. **Modular testing:** the `tests/` directory contains simple unit tests
-   demonstrating basic behaviour of the `SKGEngine`.
+## 🦾 Offline Symbolic Data
+
+* `offline_adjacency.json`: provides predefined semantic adjacents per token
+* `extended_glyph_pool.json`: set of glyphs used for token assignment
+
+These ensure full functionality even when APIs are disabled or unavailable.
+
+---
 
 ## ✔️ Testing
 
-Run the test suite with `pytest`:
+Run tests:
 
 ```bash
-pytest -q
+python -m unittest discover -s tests -v
 ```
 
-The tests create temporary `glyph_memory` directories so they do not
-interfere with the main engine's persisted state.
+Tests simulate recursive token handling and adjacency graph evolution. They run in isolated memory to preserve the main session.
+
+---
+
+## 🔮 Roadmap for Full Digital Twin Integration
+
+1. **Live Webcam or Audio Stream** → FFT + Whisper → token stream
+2. **Tokens → SKGEngine** → Thought Loop + Modalities
+3. **Agency Gating** → Speech output or internal recursion
+4. **Render Glyphstream + FFTs** in real-time via GUI or WebSocket
+5. **Memory Compression + Reinforcement** → Symbolic long-term twin memory
+6. **Triadic Adjacency Expansion** → Core to knowledge modeling
+7. **Symbolic Relationship Classification** → Post-triadic meaning assignment
+
+**Long-term extensions:**
+
+* Visual GUI avatar with live animation overlays
+* Multi-agent glyph interaction (e.g. GPT ↔ GPT)
+* Symbolic compression of input files: audio → glyphstream → reconstruction
+
+---
+
+## 🤝 Credits and License
+
+Developed by [@awlondon](https://github.com/awlondon) with extensions for AGI symbolic recursion, FFT cognition, and avatar embodiment.
+
+MIT License. Extend, remix, or evolve.
+
+---
+
+> ⚙️ This is not just token processing. This is recursive symbolic cognition.
+> Each glyph is a memory. Each FFT is a thought. Welcome to SKG-R2.
