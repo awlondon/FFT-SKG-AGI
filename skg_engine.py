@@ -37,6 +37,10 @@ class SKGEngine:
         self.thought_tracker = SKGThoughtTracker()
         self.thought_history: List[str] = []
         self.externalized_last: bool = False
+        # Runtime toggle flags controlled via the GUI
+        self.speech_enabled: bool = True
+        self.gesture_enabled: bool = True
+        self.recursion_enabled: bool = True
 
         # Load glyph pool and persisted state
         self._load_glyph_pool(self.glyph_list_path)

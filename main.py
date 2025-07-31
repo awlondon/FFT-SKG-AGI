@@ -6,6 +6,8 @@ from agency_gate import process_agency_gates  # noqa: F401  # imported for side 
 from tts_engine import speak
 from stt_engine import transcribe_speech
 from glyph_visualizer import generate_glyph_image
+from skg_gui import SKGGUI
+import threading
 
 # Setup required directories on program start
 required_dirs = [
@@ -41,7 +43,7 @@ def save_glyph(glyph: dict) -> None:
         print(f"[Main] Error saving glyph for '{glyph['token']}': {e}")
 
 
-def process_input(user_input: str, skg: SKGEngine) -> None:
+def process_input(user_input: str, skg: SKGEngine, gui: SKGGUI | None = None) -> None:
     token = user_input.lower()
     glyph_data = load_or_create_glyph(token)
     # Add glyph id to pool if not already present
@@ -53,8 +55,9 @@ def process_input(user_input: str, skg: SKGEngine) -> None:
     skg.update_adjacency_map(token, adjacents)
     # Visual glyph rendering
     generate_glyph_image(glyph_id)
-    # Run symbolic recursion
-    skg.recursive_thought_loop(token)
+    # Run symbolic recursion if enabled
+    if skg.recursion_enabled:
+        skg.recursive_thought_loop(token)
     save_glyph(glyph_data)
     # Top adjacents report
     top_three = sorted(
@@ -63,7 +66,7 @@ def process_input(user_input: str, skg: SKGEngine) -> None:
         reverse=True
     )[:3]
     print("[Top Adjacents]", top_three)
-    if top_three:
+    if top_three and skg.speech_enabled:
         speak(" ".join(t for t, _ in top_three))
     # Optional console clear after externalization
     if hasattr(skg, "externalized_last") and skg.externalized_last:
@@ -73,10 +76,15 @@ def process_input(user_input: str, skg: SKGEngine) -> None:
             print(" -> ".join(skg.thought_history[-10:]))
         skg.externalized_last = False
 
+    if gui:
+        gui.update_from_token(glyph_data)
+
 
 def main() -> None:
     # Initialize symbolic cognition engine
     skg = SKGEngine(data_path)
+    gui = SKGGUI(skg)
+    threading.Thread(target=gui.run, daemon=True).start()
     # Load extended glyph pool if available
     glyph_pool_path = "glossary/extended_glyph_pool.json"
     if os.path.exists(glyph_pool_path):
@@ -95,9 +103,9 @@ def main() -> None:
             spoken = transcribe_speech()
             if spoken:
                 speak(f"You said {spoken}")
-                process_input(spoken, skg)
+                process_input(spoken, skg, gui)
             continue
-        process_input(user_input, skg)
+        process_input(user_input, skg, gui)
 
 
 if __name__ == "__main__":
