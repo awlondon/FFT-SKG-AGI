@@ -1,8 +1,9 @@
 import os
 import json
+import pickle
 import random
 from datetime import datetime
-from typing import Optional, List
+from typing import Optional, List, Any
 
 from engine_comm import write_message, subscribe_to_stream
 
@@ -38,6 +39,26 @@ class SKGEngine:
         self.comm_enabled = comm_enabled
         self.comm_out_file = os.path.join(self.memory_path, "engine_stream.jsonl")
         self._subscriptions: list = []
+
+    binary : bool
+        If True, engine state will be serialized with ``pickle`` instead of
+        JSON.
+    encrypt_key : Optional[bytes]
+        Optional symmetric key used to XOR encrypt the persisted state.
+    """
+
+    def __init__(
+        self,
+        memory_path: str,
+        glyph_path: Optional[str] = "glossary/extended_glyph_pool.json",
+        *,
+        binary: bool = False,
+        encrypt_key: Optional[bytes] = None,
+    ):
+        self.memory_path = memory_path
+        self.glyph_list_path = glyph_path
+        self.binary = binary
+        self.encrypt_key = encrypt_key
         self.token_map: dict[str, dict] = {}
         self.adjacency_map: dict[str, dict[str, int]] = {}
         self.glyph_pool: List[str] = []
@@ -45,6 +66,10 @@ class SKGEngine:
         self.thought_tracker = SKGThoughtTracker()
         self.thought_history: List[str] = []
         self.externalized_last: bool = False
+        # Runtime toggle flags controlled via the GUI
+        self.speech_enabled: bool = True
+        self.gesture_enabled: bool = True
+        self.recursion_enabled: bool = True
 
         # Load glyph pool and persisted state
         self._load_glyph_pool(self.glyph_list_path)
@@ -72,6 +97,17 @@ class SKGEngine:
         with open(log_path, "a", encoding="utf-8") as f:
             f.write(json.dumps(entry) + "\n")
 
+    def _encrypt(self, data: bytes) -> bytes:
+        """XOR encrypt data with the configured key."""
+        if not self.encrypt_key:
+            return data
+        key = self.encrypt_key
+        return bytes(b ^ key[i % len(key)] for i, b in enumerate(data))
+
+    def _decrypt(self, data: bytes) -> bytes:
+        """XOR decrypt data with the configured key."""
+        return self._encrypt(data)
+
     def _load_glyph_pool(self, path: Optional[str]) -> None:
         """Load the list of available glyphs from a JSON file."""
         # Ensure we have a fallback glyph
@@ -90,34 +126,74 @@ class SKGEngine:
 
     def _load_state(self) -> None:
         """Load token and adjacency maps from persistent storage if they exist."""
-        token_path = os.path.join(self.memory_path, "token_map.json")
-        adj_path = os.path.join(self.memory_path, "adjacency_map.json")
+        ext = "pkl" if self.binary else "json"
+        token_path = os.path.join(self.memory_path, f"token_map.{ext}")
+        adj_path = os.path.join(self.memory_path, f"adjacency_map.{ext}")
         if os.path.exists(token_path):
             try:
-                with open(token_path, "r", encoding="utf-8") as f:
-                    self.token_map = json.load(f)
+                mode = "rb" if self.binary or self.encrypt_key else "r"
+                with open(token_path, mode) as f:
+                    data = f.read()
+                if mode == "rb":
+                    data = self._decrypt(data)
+                    if self.binary:
+                        self.token_map = pickle.loads(data)
+                    else:
+                        self.token_map = json.loads(data.decode("utf-8"))
+                else:
+                    self.token_map = json.loads(data)
             except Exception:
                 self.token_map = {}
         if os.path.exists(adj_path):
             try:
-                with open(adj_path, "r", encoding="utf-8") as f:
-                    self.adjacency_map = json.load(f)
+                mode = "rb" if self.binary or self.encrypt_key else "r"
+                with open(adj_path, mode) as f:
+                    data = f.read()
+                if mode == "rb":
+                    data = self._decrypt(data)
+                    if self.binary:
+                        self.adjacency_map = pickle.loads(data)
+                    else:
+                        self.adjacency_map = json.loads(data.decode("utf-8"))
+                else:
+                    self.adjacency_map = json.loads(data)
             except Exception:
                 self.adjacency_map = {}
 
     def save_state(self) -> None:
         """Persist token and adjacency maps to disk."""
         os.makedirs(self.memory_path, exist_ok=True)
-        token_path = os.path.join(self.memory_path, "token_map.json")
-        adj_path = os.path.join(self.memory_path, "adjacency_map.json")
+        ext = "pkl" if self.binary else "json"
+        token_path = os.path.join(self.memory_path, f"token_map.{ext}")
+        adj_path = os.path.join(self.memory_path, f"adjacency_map.{ext}")
+        mode = "wb" if self.binary or self.encrypt_key else "w"
         try:
-            with open(token_path, "w", encoding="utf-8") as f:
-                json.dump(self.token_map, f, indent=2)
+            data: Any
+            if self.binary:
+                data = pickle.dumps(self.token_map)
+            else:
+                json_str = json.dumps(self.token_map, indent=2)
+                data = json_str.encode("utf-8") if mode == "wb" else json_str
+            if mode == "wb":
+                with open(token_path, mode) as f:
+                    f.write(self._encrypt(data))
+            else:
+                with open(token_path, mode, encoding="utf-8") as f:
+                    f.write(data)
         except Exception:
             pass
         try:
-            with open(adj_path, "w", encoding="utf-8") as f:
-                json.dump(self.adjacency_map, f, indent=2)
+            if self.binary:
+                data = pickle.dumps(self.adjacency_map)
+            else:
+                json_str = json.dumps(self.adjacency_map, indent=2)
+                data = json_str.encode("utf-8") if mode == "wb" else json_str
+            if mode == "wb":
+                with open(adj_path, mode) as f:
+                    f.write(self._encrypt(data))
+            else:
+                with open(adj_path, mode, encoding="utf-8") as f:
+                    f.write(data)
         except Exception:
             pass
 
