@@ -26,8 +26,8 @@ def process_agency_gates(token: str, token_data: dict, adjacency_count: int = 0)
         Number of adjacent tokens currently associated with this token.
     """
     print(f"[AgencyGate] Processing gates for token: {token}")
-    gates = ["explore", "reevaluate", "externalize", "prune"]
-    decisions: list[AgencyGateDecision] = []
+    gates = ["explore", "reevaluate", "externalize", "prune", "expression"]
+    decisions: list[dict] = []
     frequency = token_data.get("frequency", 1)
     weight = token_data.get("weight", 1)
     for gate in gates:
@@ -47,8 +47,26 @@ def process_agency_gates(token: str, token_data: dict, adjacency_count: int = 0)
             confidence = max(0.0, min(yes_weight, 1.0))
             decisions.append(AgencyGateDecision(gate, externalize_decision, confidence))
         elif gate == "prune":
-            yes_weight = 0.6 - (weight * 0.1) - (frequency * 0.05)
-            prune_decision = random.choices(["YES", "NO", "WITHHOLD"], weights=[yes_weight, 0.3, 0.1])[0]
-            confidence = max(0.0, min(yes_weight, 1.0))
-            decisions.append(AgencyGateDecision(gate, prune_decision, confidence))
+            prune_weight = 0.6 - (weight * 0.1) - (frequency * 0.05)
+            prune_decision = random.choices(["YES", "NO", "WITHHOLD"], weights=[prune_weight, 0.3, 0.1])[0]
+            decisions.append({
+                "gate": gate,
+                "decision": prune_decision,
+                "timestamp": datetime.utcnow().isoformat() + "Z"
+            })
+        elif gate == "expression":
+            speak_conf = min(1.0, 0.3 + (weight * 0.1))
+            gesture_conf = 1.0 - speak_conf
+            if speak_conf >= gesture_conf:
+                decision = "speak"
+                confidence = speak_conf
+            else:
+                decision = "gesture"
+                confidence = gesture_conf
+            decisions.append({
+                "gate": gate,
+                "decision": decision,
+                "confidence": round(confidence, 2),
+                "timestamp": datetime.utcnow().isoformat() + "Z"
+            })
     return decisions

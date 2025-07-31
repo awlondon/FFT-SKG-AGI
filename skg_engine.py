@@ -10,6 +10,14 @@ from engine_comm import write_message, subscribe_to_stream
 from superknowledge_graph import SuperKnowledgeGraph
 from agency_gate import process_agency_gates, AgencyGateDecision
 from skg_thought_tracker import SKGThoughtTracker
+try:
+    from tts_engine import speak
+except Exception:
+    speak = None  # type: ignore
+try:
+    from gesture_engine import display_gesture
+except Exception:
+    display_gesture = None  # type: ignore
 
 
 class SKGEngine:
@@ -56,6 +64,7 @@ class SKGEngine:
         self.thought_tracker = SKGThoughtTracker()
         self.thought_history: List[str] = []
         self.externalized_last: bool = False
+        self.last_modality: str = "speak"
         # Runtime toggle flags controlled via the GUI
         self.speech_enabled: bool = True
         self.gesture_enabled: bool = True
@@ -279,9 +288,9 @@ class SKGEngine:
         if len(self.thought_history) > 20:
             self.thought_history = self.thought_history[-20:]
 
-        gate = self.evaluate_agency_gate(token)
+        gate, modality, _ = self.evaluate_agency_gate(token)
         if gate == "externalize":
-            self.externalize_token(token)
+            self.externalize_token(token, modality)
             self.thought_tracker.log_thought_loop(token, depth, [current_glyph], True)
             self.thought_tracker.reset()
             return [current_glyph]
@@ -295,7 +304,7 @@ class SKGEngine:
             result.extend(self.recursive_thought_loop(adj_token, depth + 1, max_depth, parent=token))
         return result
 
-    def evaluate_agency_gate(self, token: str) -> str:
+    def evaluate_agency_gate(self, token: str) -> tuple[str, str, float]:
         """
         Determine which agency gate should fire for the given token.  A simple
         heuristic is used: tokens with low weight and few adjacencies tend to
@@ -308,26 +317,32 @@ class SKGEngine:
         adj_count = len(self.adjacency_map.get(token, {}))
         token_data = {"frequency": weight, "weight": weight}
         decisions = process_agency_gates(token, token_data, adj_count)
+        modality_decision = next((d for d in decisions if d["gate"] == "expression"), {"decision": "speak", "confidence": 0.5})
+        # Determine a preferred gate based on simple heuristics
+        if weight <= 1 and adj_count <= 0:
+            return "explore", modality_decision["decision"], modality_decision.get("confidence", 0.5)
+        if weight <= 2 and adj_count <= 2:
+            return "reevaluate", modality_decision["decision"], modality_decision.get("confidence", 0.5)
+        if weight >= 3:
+            return "externalize", modality_decision["decision"], modality_decision.get("confidence", 0.5)
+        # Otherwise pick the first affirmative decision or fall back to random
+        for d in decisions:
+            if d["decision"] == "YES":
+                return d["gate"], modality_decision["decision"], modality_decision.get("confidence", 0.5)
+        return random.choice([d["gate"] for d in decisions]), modality_decision["decision"], modality_decision.get("confidence", 0.5)
 
-        if isinstance(glyph, dict):
-            glyph.setdefault("agency_trace", []).append({
-                "timestamp": datetime.utcnow().isoformat() + "Z",
-                "decisions": [d.__dict__ for d in decisions],
-            })
-            self.save_state()
-
-        best = max(decisions, key=lambda d: d.confidence)
-        if best.confidence >= 0.5:
-            return best.gate
-        return random.choice([d.gate for d in decisions])
-
-    def externalize_token(self, token: str) -> None:
-        """Output a token's glyph and weight to the console."""
+    def externalize_token(self, token: str, modality: str = "speak") -> None:
+        """Output a token's glyph using speech or gesture."""
         glyph = self.token_map.get(token)
         display = glyph.get("glyph_id", glyph) if isinstance(glyph, dict) else glyph
         weight = glyph.get("modalities", {}).get("text", {}).get("weight") if isinstance(glyph, dict) else None
-        print(f"[SKGEngine] Externalizing '{token}' → '{display}' (weight: {weight if weight is not None else 'N/A'})")
+        print(f"[SKGEngine] Externalizing '{token}' → '{display}' (weight: {weight if weight is not None else 'N/A'}, modality: {modality})")
+        if modality == "speak" and speak and self.speech_enabled:
+            speak(token)
+        elif modality == "gesture" and display_gesture and self.gesture_enabled:
+            display_gesture(token)
         self.externalized_last = True
+        self.last_modality = modality
         if self.comm_enabled:
             write_message(self.comm_out_file, token, display)
 

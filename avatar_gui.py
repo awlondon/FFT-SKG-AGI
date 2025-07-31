@@ -25,6 +25,9 @@ class AvatarGUI:
         self.audio_fft_label.grid(row=1, column=0, padx=5, pady=5)
         self.image_fft_label = tk.Label(self.root, text="Image FFT", width=256, height=256)
         self.image_fft_label.grid(row=1, column=1, padx=5, pady=5)
+        # gesture cue
+        self.gesture_label = tk.Label(self.root, text="Gesture: none", width=30)
+        self.gesture_label.grid(row=2, column=0, columnspan=2, pady=5)
         self.last_token: Optional[str] = None
 
     def run(self) -> None:
@@ -33,12 +36,12 @@ class AvatarGUI:
 
     def process_queue(self) -> None:
         while not self.update_queue.empty():
-            glyph = self.update_queue.get()
-            self._update_display(glyph)
+            glyph, gesture = self.update_queue.get()
+            self._update_display(glyph, gesture)
         self.root.after(200, self.process_queue)
 
-    def update_from_token(self, glyph: dict) -> None:
-        self.update_queue.put(glyph)
+    def update_from_token(self, glyph: dict, gesture: Optional[str] = None) -> None:
+        self.update_queue.put((glyph, gesture))
 
     def _set_image(self, label: tk.Label, path: Optional[str], key: str) -> None:
         if path and os.path.exists(path):
@@ -51,7 +54,7 @@ class AvatarGUI:
         else:
             label.configure(text="No image", image="")
 
-    def _update_display(self, glyph: dict) -> None:
+    def _update_display(self, glyph: dict, gesture: Optional[str]) -> None:
         self.last_token = glyph.get("token")
         visual = glyph.get("modalities", {}).get("visual", {})
         audio_mod = glyph.get("modalities", {}).get("audio", {})
@@ -59,6 +62,10 @@ class AvatarGUI:
         self._set_image(self.audio_fft_label, audio_mod.get("fft_audio"), "audio")
         img_fft = visual.get("fft_from_image") or visual.get("fft_visual")
         self._set_image(self.image_fft_label, img_fft, "imgfft")
+        if gesture:
+            self.gesture_label.configure(text=f"Gesture: {gesture}")
+        else:
+            self.gesture_label.configure(text="Gesture: none")
         self._update_graph()
 
     def _update_graph(self) -> None:
@@ -68,20 +75,13 @@ class AvatarGUI:
             return
         center_x = center_y = 128
         radius = 90
-        self.graph_canvas.create_oval(
-            center_x - 20,
-            center_y - 20,
-            center_x + 20,
-            center_y + 20,
-            fill="lightblue",
-        )
+        self.graph_canvas.create_oval(center_x-20, center_y-20, center_x+20, center_y+20, fill="lightblue")
         self.graph_canvas.create_text(center_x, center_y, text=token)
         adjs = list(self.engine.get_adjacencies_for_token(token).keys())[:6]
         for i, adj in enumerate(adjs):
-            angle = math.radians(i * (360 / len(adjs))) if adjs else 0
+            angle = math.radians(i * (360/len(adjs))) if adjs else 0
             x = center_x + radius * math.cos(angle)
             y = center_y + radius * math.sin(angle)
             self.graph_canvas.create_line(center_x, center_y, x, y)
-            self.graph_canvas.create_oval(x - 15, y - 15, x + 15, y + 15, fill="white")
+            self.graph_canvas.create_oval(x-15, y-15, x+15, y+15, fill="white")
             self.graph_canvas.create_text(x, y, text=adj, font=("Arial", 8))
-

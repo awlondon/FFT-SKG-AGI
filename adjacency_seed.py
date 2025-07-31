@@ -95,6 +95,7 @@ def generate_adjacents(token: str, top_k: int = 5) -> list[dict]:
     return _format_adjacents(variations[:top_k], source="fallback")
 
 
+
 def _format_adjacents(adj_list: list[str], source: str = "GPT") -> list[dict]:
     return [
         {
@@ -105,3 +106,4 @@ def _format_adjacents(adj_list: list[str], source: str = "GPT") -> list[dict]:
         }
         for adj in adj_list if isinstance(adj, str)
     ]
+
