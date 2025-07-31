@@ -3,4 +3,5 @@
     "hello": ["hi", "greetings", "hey", "salutation", "welcome"],
     "world": ["earth", "globe", "planet", "sphere", "universe"]
     ,"fire": ["flame", "heat", "burn", "ignite", "ember"]
+    "world": ["earth", "globe", "planet", "sphere", "universe"],
 }

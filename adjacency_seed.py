@@ -81,7 +81,7 @@ def generate_adjacents(token: str, top_k: int = 5) -> list[dict]:
             for line in lines:
                 parts = line.split(":", 1)
                 if len(parts) == 2:
-                    candidates.append(parts[1].strip())
+                    candidates.append(parts[1].strip().strip(' ",'))
             return _format_adjacents(candidates[:top_k])
         except Exception as e:
             print(f"[AdjacencySeed] Error generating adjacents for '{token}': {e}")
