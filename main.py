@@ -1,6 +1,7 @@
 import os
 import json
 from skg_engine import SKGEngine
+import config
 from glyph_builder import build_glyph_if_needed
 from agency_gate import process_agency_gates  # noqa: F401  # imported for side effects
 from tts_engine import speak
@@ -81,10 +82,10 @@ def process_input(user_input: str, skg: SKGEngine, gui: SKGGUI | None = None) ->
 
 
 def main() -> None:
-    # Initialize symbolic cognition engine
-    skg = SKGEngine(data_path)
-    gui = SKGGUI(skg)
-    threading.Thread(target=gui.run, daemon=True).start()
+    # Initialize symbolic cognition engine with communication options
+    skg = SKGEngine(data_path, comm_enabled=config.ENABLE_ENGINE_COMM)
+    if config.ENABLE_ENGINE_COMM and config.SUBSCRIBE_STREAM:
+        skg.subscribe_to_engine(config.SUBSCRIBE_STREAM)
     # Load extended glyph pool if available
     glyph_pool_path = "glossary/extended_glyph_pool.json"
     if os.path.exists(glyph_pool_path):
