@@ -1,6 +1,5 @@
 import os
 import json
-import hashlib
 from typing import List
 
 # Import optional dependencies within try/except so that missing libraries
@@ -27,7 +26,7 @@ except Exception:
     generate_glyph_image = None  # type: ignore
 
 
-def generate_modalities(token: str, glyph_id: str) -> dict:
+def generate_modalities(token: str, glyph_id: str, token_id: str) -> dict:
     """
     Generate and store multimodal representations for a token/glyph.
 
@@ -39,13 +38,12 @@ def generate_modalities(token: str, glyph_id: str) -> dict:
     cannot be produced its entry will either be omitted or set to None.
     """
     print(f"[Modalities] Generating modalities for: {token} / {glyph_id}")
-    hash_id = hashlib.sha1(token.encode()).hexdigest()[:8]
 
-    # Construct file paths
-    audio_path = f"modalities/audio/{token}_{hash_id}.wav"
-    fft_audio_path = f"modalities/fft_audio/{token}_{hash_id}.npy"
-    fft_visual_path = f"modalities/fft_visual/{token}_{hash_id}.png"
-    symbolic_image_path = f"modalities/images/{token}_{hash_id}_sigil.png"
+    # Construct file paths using the shared token_id
+    audio_path = f"modalities/audio/{token_id}.wav"
+    fft_audio_path = f"modalities/fft_audio/{token_id}.npy"
+    fft_visual_path = f"modalities/fft_visual/{token_id}.png"
+    symbolic_image_path = f"modalities/images/{token_id}_sigil.png"
 
     # Ensure directories exist
     for p in [audio_path, fft_audio_path, fft_visual_path, symbolic_image_path]:
