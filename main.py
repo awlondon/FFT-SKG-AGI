@@ -2,6 +2,7 @@ import os
 import json
 import argparse
 import threading
+import time
 from skg_engine import SKGEngine
 import config
 from glyph_builder import build_glyph_if_needed
@@ -88,10 +89,31 @@ def process_input(user_input: str, skg: SKGEngine, gui: AvatarGUI  | None = None
         gui.update_from_token(glyph_data)
 
 
+def voice_listener_loop(skg: SKGEngine, gui: AvatarGUI | None) -> None:
+    """Continuously listen on the microphone and process any recognized speech."""
+    while True:
+        spoken, _ = transcribe_speech()
+        if spoken:
+            speak(f"You said {spoken}")
+            process_input(spoken, skg, gui)
+        time.sleep(0.5)
+
+
+def webcam_listener_loop(skg: SKGEngine, gui: AvatarGUI | None) -> None:
+    """Continuously capture webcam frames and process the derived token."""
+    while True:
+        token, image_path = capture_frame()
+        if token:
+            print(f"[Webcam] Token {token} from {image_path}")
+            skg.assign_glyph_to_token(token)
+            process_input(token, skg, gui)
+        time.sleep(3)
+
+
 def main() -> None:
     # Initialize symbolic cognition engine with communication options
     parser = argparse.ArgumentParser(description="SKG Engine")
-    parser.add_argument("--gui", action="store_true", help="launch Tkinter GUI")
+    parser.add_argument("--no-gui", action="store_true", help="disable Tkinter GUI")
     args = parser.parse_args()
 
     skg = SKGEngine(data_path, comm_enabled=config.ENABLE_ENGINE_COMM)
@@ -107,13 +129,16 @@ def main() -> None:
         except Exception:
             pass
     gui = None
-    if args.gui:
+    if not args.no_gui:
         gui = AvatarGUI(skg)
         threading.Thread(target=gui.run, daemon=True).start()
+
+    threading.Thread(target=voice_listener_loop, args=(skg, gui), daemon=True).start()
+    threading.Thread(target=webcam_listener_loop, args=(skg, gui), daemon=True).start()
         
     print("⚙️  SKG-R2 Engine Initialized. Type 'exit' to quit.")
     while True:
-        user_input = input("\nEnter token or type 'voice' or 'webcam': ").strip()
+        user_input = input("\nEnter token: ").strip()
         if user_input.lower() == 'exit':
             break
         elif user_input.lower() == 'voice':
