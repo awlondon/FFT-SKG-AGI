@@ -1,5 +1,7 @@
 import os
 import json
+import argparse
+import threading
 from skg_engine import SKGEngine
 import config
 from glyph_builder import build_glyph_if_needed
@@ -11,8 +13,7 @@ from tts_engine import speak
 from stt_engine import transcribe_speech
 from video_capture import capture_frame
 from glyph_visualizer import generate_glyph_image
-from skg_gui import SKGGUI
-import threading
+from avatar_gui import AvatarGUI
 
 # Setup required directories on program start
 required_dirs = [
@@ -50,7 +51,7 @@ def save_glyph(glyph: dict) -> None:
         print(f"[Main] Error saving glyph for '{glyph['token']}': {e}")
 
 
-def process_input(user_input: str, skg: SKGEngine, gui: SKGGUI | None = None) -> None:
+def process_input(user_input: str, skg: SKGEngine, gui: AvatarGUI  | None = None) -> None:
     token = user_input.lower()
     glyph_data = load_or_create_glyph(token)
     # Add glyph id to pool if not already present
@@ -89,6 +90,10 @@ def process_input(user_input: str, skg: SKGEngine, gui: SKGGUI | None = None) ->
 
 def main() -> None:
     # Initialize symbolic cognition engine with communication options
+    parser = argparse.ArgumentParser(description="SKG Engine")
+    parser.add_argument("--gui", action="store_true", help="launch Tkinter GUI")
+    args = parser.parse_args()
+
     skg = SKGEngine(data_path, comm_enabled=config.ENABLE_ENGINE_COMM)
     if config.ENABLE_ENGINE_COMM and config.SUBSCRIBE_STREAM:
         skg.subscribe_to_engine(config.SUBSCRIBE_STREAM)
@@ -101,6 +106,11 @@ def main() -> None:
                     skg.add_glyph_to_pool(g)
         except Exception:
             pass
+    gui = None
+    if args.gui:
+        gui = AvatarGUI(skg)
+        threading.Thread(target=gui.run, daemon=True).start()
+        
     print("⚙️  SKG-R2 Engine Initialized. Type 'exit' to quit.")
     while True:
         user_input = input("\nEnter token or type 'voice' or 'webcam': ").strip()
