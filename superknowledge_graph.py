@@ -9,26 +9,26 @@ class Matrix:
     def __init__(self, name: str):
         self.name = name
         # adjacency[token_a][token_b] = weight
-        self.adjacency = {}
+        self.adjacency: dict[str, dict[str, float]] = {}
 
-    def add_node(self, node: Node):
+    def add_node(self, node: Node) -> None:
         self.adjacency.setdefault(node.token, {})
 
-    def add_edge(self, node_a: Node, node_b: Node, weight: float = 1.0):
+    def add_edge(self, node_a: Node, node_b: Node, weight: float = 1.0) -> None:
         self.add_node(node_a)
         self.add_node(node_b)
         self.adjacency[node_a.token][node_b.token] = weight
         self.adjacency[node_b.token][node_a.token] = weight
 
-    def neighbors(self, token: str):
+    def neighbors(self, token: str) -> dict:
         return self.adjacency.get(token, {})
 
 
 class SuperKnowledgeGraph:
     """Hierarchical structure of overlapping matrices."""
     def __init__(self):
-        self.nodes = {}
-        self.matrices = {}
+        self.nodes: dict[str, Node] = {}
+        self.matrices: dict[str, Matrix] = {}
 
     def get_node(self, token: str) -> Node:
         if token not in self.nodes:
@@ -40,19 +40,19 @@ class SuperKnowledgeGraph:
             self.matrices[name] = Matrix(name)
         return self.matrices[name]
 
-    def connect(self, matrix_name: str, token_a: str, token_b: str, weight: float = 1.0):
+    def connect(self, matrix_name: str, token_a: str, token_b: str, weight: float = 1.0) -> None:
         node_a = self.get_node(token_a)
         node_b = self.get_node(token_b)
         matrix = self.get_matrix(matrix_name)
         matrix.add_edge(node_a, node_b, weight)
 
-    def matrices_for_token(self, token: str):
+    def matrices_for_token(self, token: str) -> list[str]:
         return [name for name, mat in self.matrices.items() if token in mat.adjacency]
 
-    def traverse(self, start_token: str, max_steps: int = 5):
-        visited = set()
-        queue = [(start_token, m) for m in self.matrices_for_token(start_token)]
-        path = []
+    def traverse(self, start_token: str, max_steps: int = 5) -> list:
+        visited: set[tuple[str, str]] = set()
+        queue: list[tuple[str, str]] = [(start_token, m) for m in self.matrices_for_token(start_token)]
+        path: list[dict[str, str]] = []
         steps = 0
         while queue and steps < max_steps:
             token, matrix_name = queue.pop(0)

@@ -1,133 +1,98 @@
-# ⚙️ FFT-SKG-AGI
+# ⚙️ FFT-SKG‑AGI (Improved)
 
-**FFT-SKG-AGI** is a symbolic cognition engine that recursively processes input tokens into glyph-based representations, explores adjacency relationships through agency gates, and externalizes thoughts via multimodal outputs.
+This repository contains a lightweight symbolic cognition engine that maps
+incoming tokens to unicode glyphs, records adjacency relationships and
+generates multimodal representations such as audio, images and FFT
+visualizations.  The project is a sandbox for exploring recursive thought
+loops and emergent knowledge graphs while remaining self‑contained and
+offline friendly.
 
-This project is both a testbed and prototype for symbolic AGI development — combining recursion, agency, and symbolic compression into an emergent cognition framework.
+## 🧠 Overview
 
----
+For each token you supply the engine will:
 
-## 🧠 What It Does
+- 🔹 Assign a unicode glyph selected deterministically from a pool.
+- 🔸 Record semantically adjacent tokens (either from an offline cache or
+  via OpenAI when available) and update an adjacency graph.
+- 🔺 Optionally externalize the token by producing a simple glyph image.
+- 📈 Log weight updates and adjacency traversals to JSONL files for later
+  visualization.
 
-Each token entered is:
+The `SKGEngine` orchestrates thought loops, persistence and simple
+heuristic gating.  Audio synthesis, FFT generation and image search are
+implemented but disabled by default when dependencies or API keys are
+missing.
 
-- 🔹 Assigned a symbolic glyph (e.g. 🜂, ⚚, ⚛)
-- 🔸 Processed through adjacency and frequency-based agency gates
-- 🔺 Optionally externalized as audio, FFT, or image output
-- 📈 Logged into structured symbolic reasoning traces
+## 🚀 Getting Started
 
-The `SKGEngine` handles thought loops, adjacency mapping, and weight tracking.
+### Installation
 
----
-
-## 🚀 Running the Engine
-
-Start with:
-
-```bash
-python main.py
-
-=======
-⚙️ FFT-SKG-AGI
-FFT-SKG-AGI is an experimental symbolic cognition engine that transforms input tokens into glyph-based representations, explores their adjacency relationships via recursive agency gates, and produces multimodal outputs including:
-
-🧠 Symbolic glyphs
-
-🎧 Audio + FFTs
-
-🖼️ Visual glyph images
-
-📈 Log-based thought trace logs
-
-This project is a sandbox for emergent symbolic knowledge graphs driven by open-ended token streams and recursive symbolic agency.
-
-🚀 Running the Engine
-Start the interactive engine:
-
-bash
-Copy
-Edit
-python main.py
-On first run, it will automatically create folders under modalities/, glyph_memory/, and logs/.
-
-Each token entered is:
-
-Assigned a unique symbolic glyph
-
-Passed through an agency gate pipeline
-
-Optionally externalized via FFT, image, or audio
-
-📊 Visualizing Thought Logs
-You can inspect agency gate behavior over time using:
-
-bash
-Copy
-Edit
-python graph_cli.py path/to/gate_decision_log.jsonl
-This renders relationships between tokens, agency gates, and decisions based on adjacency and frequency.
-
-🖋️ Using Symbola for Unicode Glyphs
-Some features rely on the Symbola font to properly render advanced Unicode glyphs (e.g. 🜂, ⚚, 🜁).
-
-### Download Instructions
-Download `Symbola.ttf` from a trusted source like Font Library and place it in a known directory:
+Install dependencies listed in `requirements.txt` (optionally using a
+virtual environment):
 
 ```bash
-mkdir _fonts
-mv /path/to/Symbola.ttf _fonts/
-```
-
-Set the `SYMBOLA_FONT_PATH` environment variable to the location of your font if
-it is not in the project root. The engine will also check the `_fonts/`
-directory automatically.
-
-### Usage Example
-To generate a glyph image using the font directly:
-
-```python
-from glyph_visualizer import generate_glyph_image
-
-image_path = generate_glyph_image("🜂", font_path="_fonts/Symbola.ttf")
-```
-If no `font_path` is given and the default path fails, it falls back to a
-generic system font via Pillow.
-
-🔧 Requirements
-Install dependencies with:
-
-bash
-Copy
-Edit
 pip install -r requirements.txt
-Required Python Packages:
-openai
+```
 
-requests
+Optional dependencies include:
 
-numpy
+- `openai` for generating semantic adjacents when the `OPENAI_API_KEY`
+  environment variable is set.
+- `requests` for image search via SerpAPI when `SERPAPI_API_KEY` is set.
+- `pyttsx3` for offline text‑to‑speech synthesis.
+- `speechrecognition` for optional voice input.
 
-scipy
+### Running the Engine
 
-matplotlib
+Execute the CLI and enter tokens interactively:
 
-Pillow
+```bash
+python main.py
+```
 
-pyttsx3
+On first run it will create a `glyph_memory/` directory for persistence and
+subfolders under `modalities/` for generated assets.  Type tokens or
+`voice` to transcribe spoken input.  Type `exit` to quit.
 
-Environment Variables:
-OPENAI_API_KEY
+### Visualizing Logs
 
-SERPAPI_API_KEY (for image search)
+The `graph_cli.py` script can render the adjacency graph and plot token
+weight histories:
 
-🎯 Project Goals
-This project aims to:
+```bash
+python graph_cli.py --graph --out my_graph.png
+python graph_cli.py --token hello --out hello_weights.png
+```
 
-Simulate recursive agentic symbolic cognition
+## 🧾 Offline Data
 
-Assign unique glyphs to tokens via adjacency/context
+- `glossary/extended_glyph_pool.json` – list of unicode glyphs used by
+  the engine.  Feel free to add or remove glyphs to customize the pool.
+- `offline_adjacency.json` – dictionary mapping tokens to a list of
+  pre‑computed adjacents.  Populating this file allows the engine to
+  operate without network access.
 
-Generate multi-modal outputs (FFT, image, audio)
+## 🛠️ Development Notes
 
-Track and visualize symbolic reasoning loops
+This improved version of FFT‑SKG‑AGI adds the following features:
 
-Build toward self-evolving AGI cognition
+1. **Deterministic glyph selection:** tokens are hashed into the glyph pool
+   for reproducible assignments.
+2. **Offline friendly:** all external dependencies are optional.  The
+   engine falls back to simple heuristics or cached data when APIs are
+   unavailable.
+3. **Graceful error handling:** network and I/O failures are caught and
+   reported without interrupting the thought loop.
+4. **Modular testing:** the `tests/` directory contains simple unit tests
+   demonstrating basic behaviour of the `SKGEngine`.
+
+## ✔️ Testing
+
+Run the test suite with `pytest`:
+
+```bash
+pytest -q
+```
+
+The tests create temporary `glyph_memory` directories so they do not
+interfere with the main engine's persisted state.

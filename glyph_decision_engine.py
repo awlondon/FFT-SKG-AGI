@@ -1,41 +1,20 @@
-from openai import OpenAI
-import os
-import json
+import random
+from typing import List
 
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
-# Load the pool of all glyphs
-with open("glossary/extended_glyph_pool.json", "r", encoding="utf-8") as f:
-    EXTENDED_GLYPHS = json.load(f)
-
-def choose_glyph_for_token(token, adjacents=None):
-    glyph_list = EXTENDED_GLYPHS[:30]  # Limit for context
-
-    prompt = f"""
-You are a symbolic reasoning agent.
-From the list of glyphs below, choose the single most appropriate symbolic glyph for the token '{token}'.
-Base your choice on conceptual alignment. You may optionally consider these adjacent concepts: {', '.join(a['token'] for a in adjacents) if adjacents else 'none'}.
-
-Respond with ONLY the glyph.
-
-Glyph pool: {', '.join(glyph_list)}
-"""
-
-    try:
-        response = client.chat.completions.create(
-            model="gpt-3.5-turbo",
-            messages=[
-                {"role": "system", "content": "You are a symbolic cognition engine."},
-                {"role": "user", "content": prompt}
-            ],
-            temperature=0.4,
-            max_tokens=10
-        )
-        glyph = response.choices[0].message.content.strip()
-        if glyph in EXTENDED_GLYPHS:
-            return glyph
-    except Exception as e:
-        print(f"[GlyphAssignment] Error: {e}")
-
-    # Fallback
-    return f"⟁{token}"
+def choose_glyph_for_token(token: str, adjacents: List[dict] | None = None) -> str:
+    """
+    Select a glyph identifier for a token.  In this simplified implementation
+    the first character of the token is returned if it is printable and
+    longer than zero; otherwise a placeholder glyph is chosen from a
+    predefined set.  When adjacents are provided they are ignored in this
+    implementation but could be used to inform the decision in the future.
+    """
+    if token:
+        # Use the first Unicode character of the token itself if valid
+        ch = token[0]
+        if ch.isprintable():
+            return ch
+    # Fallback glyphs if token is empty or non-printable
+    pool = ["□", "○", "●", "■", "◆"]
+    return random.choice(pool)

@@ -1,8 +1,18 @@
-import speech_recognition as sr
+try:
+    import speech_recognition as sr  # type: ignore
+except Exception:
+    sr = None  # type: ignore
 
 
-def transcribe_speech(timeout=5, phrase_time_limit=5):
-    """Capture audio from the default microphone and return recognized text."""
+def transcribe_speech(timeout: int = 5, phrase_time_limit: int = 5) -> str:
+    """
+    Capture audio from the default microphone and return recognized text.
+    If speech recognition is not available an empty string is returned and
+    a warning printed.
+    """
+    if sr is None:
+        print("[STT] speech_recognition not installed; skipping transcription")
+        return ""
     recognizer = sr.Recognizer()
     try:
         with sr.Microphone() as source:

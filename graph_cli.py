@@ -1,14 +1,15 @@
 import os
 import argparse
 import json
-import networkx as nx
+import networkx as nx  # type: ignore
 import matplotlib.pyplot as plt
 
 from history_tracer import _load_log
 
 LOG_DIR = os.path.join('glyph_memory', 'logs')
 
-def plot_adjacency_graph(output='adjacency_graph.png'):
+
+def plot_adjacency_graph(output: str = 'adjacency_graph.png') -> None:
     G = nx.DiGraph()
     entries = _load_log('adjacency_walk.log')
     for e in entries:
@@ -19,20 +20,20 @@ def plot_adjacency_graph(output='adjacency_graph.png'):
     if not G:
         print('No adjacency data found')
         return
-    plt.figure(figsize=(8,6))
+    plt.figure(figsize=(8, 6))
     nx.draw_networkx(G, node_color='lightblue', edge_color='gray', with_labels=True)
     plt.tight_layout()
     plt.savefig(output)
     print(f'Graph saved to {output}')
 
 
-def plot_weight_history(token, output='weight_history.png'):
+def plot_weight_history(token: str, output: str = 'weight_history.png') -> None:
     entries = [e for e in _load_log('weight_updates.log') if e.get('token') == token]
     if not entries:
         print('No weight history for token')
         return
     weights = [e['new_weight'] for e in entries]
-    plt.figure(figsize=(6,4))
+    plt.figure(figsize=(6, 4))
     plt.plot(range(len(weights)), weights, marker='o')
     plt.title(f'Weight over time for {token}')
     plt.xlabel('update')
@@ -48,7 +49,6 @@ if __name__ == '__main__':
     parser.add_argument('--token', help='Plot weight history for token')
     parser.add_argument('--out', default=None, help='Output image path')
     args = parser.parse_args()
-
     if args.graph:
         out = args.out or 'adjacency_graph.png'
         plot_adjacency_graph(out)

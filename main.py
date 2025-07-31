@@ -2,70 +2,60 @@ import os
 import json
 from skg_engine import SKGEngine
 from glyph_builder import build_glyph_if_needed
-from agency_gate import process_agency_gates
+from agency_gate import process_agency_gates  # noqa: F401  # imported for side effects
 from tts_engine import speak
 from stt_engine import transcribe_speech
 from glyph_visualizer import generate_glyph_image
 
-# Setup required directories
+# Setup required directories on program start
 required_dirs = [
     "modalities/fft_visual",
     "modalities/audio",
     "modalities/images",
     "modalities/fft_audio"
 ]
-
 for directory in required_dirs:
     os.makedirs(directory, exist_ok=True)
 
-# Constants
+# Constants for memory storage
 data_path = "./glyph_memory"
 os.makedirs(data_path, exist_ok=True)
 
-# Initialize symbolic cognition engine
-skg = SKGEngine(data_path)
 
-# Load extended glyph pool if available
-glyph_pool_path = "extended_glyph_pool.json"
-if os.path.exists(glyph_pool_path):
-    with open(glyph_pool_path, "r", encoding="utf-8") as f:
-        for g in json.load(f):
-            skg.add_glyph_to_pool(g)
-
-# Glyph I/O helpers
-def load_or_create_glyph(token):
+def load_or_create_glyph(token: str) -> dict:
     glyph_path = os.path.join(data_path, f"{token}.json")
     if os.path.exists(glyph_path):
-        with open(glyph_path, 'r') as f:
+        with open(glyph_path, 'r', encoding='utf-8') as f:
             return json.load(f)
     else:
         glyph = build_glyph_if_needed(token, glyph_path, adj_count=50)
         return glyph
 
-def save_glyph(glyph):
+
+def save_glyph(glyph: dict) -> None:
     glyph_path = os.path.join(data_path, f"{glyph['token']}.json")
-    with open(glyph_path, 'w') as f:
-        json.dump(glyph, f, indent=2)
+    try:
+        with open(glyph_path, 'w', encoding='utf-8') as f:
+            json.dump(glyph, f, indent=2)
+    except Exception as e:
+        print(f"[Main] Error saving glyph for '{glyph['token']}': {e}")
 
-# Input processor
-def process_input(user_input):
+
+def process_input(user_input: str, skg: SKGEngine) -> None:
     token = user_input.lower()
-
     glyph_data = load_or_create_glyph(token)
-    if glyph_data.get("glyph_id") not in skg.glyph_pool:
-        skg.add_glyph_to_pool(glyph_data.get("glyph_id"))
-
+    # Add glyph id to pool if not already present
+    glyph_id = glyph_data.get("glyph_id")
+    if glyph_id and glyph_id not in skg.glyph_pool:
+        skg.add_glyph_to_pool(glyph_id)
     # Update SKG adjacency map
     adjacents = glyph_data.get("adjacents", [])
     skg.update_adjacency_map(token, adjacents)
-
     # Visual glyph rendering
-    generate_glyph_image(token)
-
+    generate_glyph_image(glyph_id)
     # Run symbolic recursion
     skg.recursive_thought_loop(token)
     save_glyph(glyph_data)
-
     # Top adjacents report
     top_three = sorted(
         skg.get_adjacencies_for_token(token).items(),
@@ -73,10 +63,8 @@ def process_input(user_input):
         reverse=True
     )[:3]
     print("[Top Adjacents]", top_three)
-
     if top_three:
         speak(" ".join(t for t, _ in top_three))
-
     # Optional console clear after externalization
     if hasattr(skg, "externalized_last") and skg.externalized_last:
         os.system("cls" if os.name == "nt" else "clear")
@@ -85,8 +73,19 @@ def process_input(user_input):
             print(" -> ".join(skg.thought_history[-10:]))
         skg.externalized_last = False
 
-# Main loop
-if __name__ == "__main__":
+
+def main() -> None:
+    # Initialize symbolic cognition engine
+    skg = SKGEngine(data_path)
+    # Load extended glyph pool if available
+    glyph_pool_path = "glossary/extended_glyph_pool.json"
+    if os.path.exists(glyph_pool_path):
+        try:
+            with open(glyph_pool_path, "r", encoding='utf-8') as f:
+                for g in json.load(f):
+                    skg.add_glyph_to_pool(g)
+        except Exception:
+            pass
     print("⚙️  SKG-R2 Engine Initialized. Type 'exit' to quit.")
     while True:
         user_input = input("\nEnter token or type 'voice': ").strip()
@@ -96,6 +95,10 @@ if __name__ == "__main__":
             spoken = transcribe_speech()
             if spoken:
                 speak(f"You said {spoken}")
-                process_input(spoken)
+                process_input(spoken, skg)
             continue
-        process_input(user_input)
+        process_input(user_input, skg)
+
+
+if __name__ == "__main__":
+    main()

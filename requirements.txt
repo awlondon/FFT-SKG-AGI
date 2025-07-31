@@ -1,12 +1,9 @@
-openai
-Pillow
 numpy
 matplotlib
 scipy
-requests
+Pillow
 pyttsx3
-opencv-python
-keyboard
-imageio
-pygame
-pyaudio
+networkx
+speechrecognition
+requests
+openai

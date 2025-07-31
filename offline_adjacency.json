@@ -1,7 +1,5 @@
 {
-  "fire": ["flame", "burn", "heat", "spark", "ember"],
-  "water": ["ocean", "liquid", "river", "flow", "hydrate"],
-  "earth": ["soil", "ground", "stone", "rock", "clay"],
-  "air": ["wind", "breeze", "sky", "oxygen", "atmosphere"],
-  "truth": ["honesty", "fact", "reality", "verity", "accuracy"]
+    "test": ["example", "experiment", "trial", "analysis", "check"],
+    "hello": ["hi", "greetings", "hey", "salutation", "welcome"],
+    "world": ["earth", "globe", "planet", "sphere", "universe"]
 }
