@@ -103,6 +103,5 @@ def _format_adjacents(adj_list: list[str], source: str = "GPT") -> list[dict]:
             "weight": 1,
             "source": source,
         }
-        for adj in adj_list
-        if isinstance(adj, str)
+        for adj in adj_list if isinstance(adj, str)
     ]

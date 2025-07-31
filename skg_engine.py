@@ -8,7 +8,7 @@ from typing import Optional, List, Any
 from engine_comm import write_message, subscribe_to_stream
 
 from superknowledge_graph import SuperKnowledgeGraph
-from agency_gate import process_agency_gates
+from agency_gate import process_agency_gates, AgencyGateDecision
 from skg_thought_tracker import SKGThoughtTracker
 
 
@@ -308,18 +308,18 @@ class SKGEngine:
         adj_count = len(self.adjacency_map.get(token, {}))
         token_data = {"frequency": weight, "weight": weight}
         decisions = process_agency_gates(token, token_data, adj_count)
-        # Determine a preferred gate based on simple heuristics
-        if weight <= 1 and adj_count <= 0:
-            return "explore"
-        if weight <= 2 and adj_count <= 2:
-            return "reevaluate"
-        if weight >= 3:
-            return "externalize"
-        # Otherwise pick the first affirmative decision or fall back to random
-        for d in decisions:
-            if d["decision"] == "YES":
-                return d["gate"]
-        return random.choice([d["gate"] for d in decisions])
+
+        if isinstance(glyph, dict):
+            glyph.setdefault("agency_trace", []).append({
+                "timestamp": datetime.utcnow().isoformat() + "Z",
+                "decisions": [d.__dict__ for d in decisions],
+            })
+            self.save_state()
+
+        best = max(decisions, key=lambda d: d.confidence)
+        if best.confidence >= 0.5:
+            return best.gate
+        return random.choice([d.gate for d in decisions])
 
     def externalize_token(self, token: str) -> None:
         """Output a token's glyph and weight to the console."""
