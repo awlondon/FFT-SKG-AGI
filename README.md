@@ -36,6 +36,7 @@ The system can be extended into a full real-time avatar with:
 
 * Text-to-speech via `pyttsx3` for self-voicing avatars
 * Speech recognition for `voice` input commands using `speechrecognition`
+* Webcam frame capture for `webcam` command using `opencv-python`
 
 ### 🎨 Visual Thought Representation
 
@@ -75,7 +76,8 @@ pip install -r requirements.txt
 * `openai` for GPT-style adjacents
 * `requests` for image search
 * `pyttsx3` for TTS
-* `speechrecognition` for STT
+* `speechrecognition` + `pyaudio` for STT
+* `opencv-python` for webcam capture
 
 ### Running the Engine
 
@@ -83,7 +85,7 @@ pip install -r requirements.txt
 python main.py
 ```
 
-Interactively enter tokens or use `voice` input. Modalities are generated, logged, and visualized (if enabled). Type `exit` to quit.
+Interactively enter tokens or use `voice` or `webcam` input. Modalities are generated, logged, and visualized (if enabled). Type `exit` to quit.
 
 ### Engine-to-Engine Communication
 
@@ -166,3 +168,4 @@ MIT License. Extend, remix, or evolve.
 
 > ⚙️ This is not just token processing. This is recursive symbolic cognition.
 > Each glyph is a memory. Each FFT is a thought. Welcome to SKG-R2.
+

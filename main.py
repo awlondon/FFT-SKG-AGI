@@ -6,6 +6,7 @@ from glyph_builder import build_glyph_if_needed
 from agency_gate import process_agency_gates  # noqa: F401  # imported for side effects
 from tts_engine import speak
 from stt_engine import transcribe_speech
+from video_capture import capture_frame
 from glyph_visualizer import generate_glyph_image
 from skg_gui import SKGGUI
 import threading
@@ -97,7 +98,7 @@ def main() -> None:
             pass
     print("⚙️  SKG-R2 Engine Initialized. Type 'exit' to quit.")
     while True:
-        user_input = input("\nEnter token or type 'voice': ").strip()
+        user_input = input("\nEnter token or type 'voice' or 'webcam': ").strip()
         if user_input.lower() == 'exit':
             break
         elif user_input.lower() == 'voice':
@@ -105,6 +106,13 @@ def main() -> None:
             if spoken:
                 speak(f"You said {spoken}")
                 process_input(spoken, skg, gui)
+            continue
+        elif user_input.lower() == 'webcam':
+            token, image_path = capture_frame()
+            if token:
+                print(f"[Webcam] Token {token} from {image_path}")
+                skg.assign_glyph_to_token(token)
+                process_input(token, skg, gui)
             continue
         process_input(user_input, skg, gui)
 
