@@ -92,7 +92,7 @@ def main() -> None:
         if user_input.lower() == 'exit':
             break
         elif user_input.lower() == 'voice':
-            spoken = transcribe_speech()
+            spoken, audio_path = transcribe_speech()
             if spoken:
                 speak(f"You said {spoken}")
                 process_input(spoken, skg)
