@@ -48,9 +48,13 @@ def generate_glyph_image(token: str, output_dir: str = "modalities/images", font
     try:
         try:
             font = ImageFont.truetype(font_path, font_size)
-        except Exception as e:
-            print(f"[GlyphVisualizer] Warning: Could not load Symbola font: {e}")
-            font = ImageFont.load_default()
+        except Exception:
+            fallback = os.path.join("fonts", "Symbola.ttf")
+            try:
+                font = ImageFont.truetype(fallback, font_size)
+            except Exception:
+                print("[GlyphVisualizer] Warning: Could not load Symbola font — using default")
+                font = ImageFont.load_default()
         img = Image.new("RGB", (width, height), color=background_color)
         draw = ImageDraw.Draw(img)
         bbox = draw.textbbox((0, 0), token, font=font)

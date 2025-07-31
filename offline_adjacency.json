@@ -1,5 +1,6 @@
 {
     "test": ["example", "experiment", "trial", "analysis", "check"],
     "hello": ["hi", "greetings", "hey", "salutation", "welcome"],
-    "world": ["earth", "globe", "planet", "sphere", "universe"]
+    "world": ["earth", "globe", "planet", "sphere", "universe"],
+    "fire": ["flame", "heat", "burn", "ember", "smoke"]
 }
