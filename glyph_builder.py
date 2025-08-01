@@ -1,6 +1,9 @@
 import os
 import json
+import hashlib
 from datetime import datetime
+
+import config
 from adjacency_seed import generate_adjacents
 from modalities import generate_modalities
 from glyph_decision_engine import choose_glyph_for_token
@@ -9,7 +12,11 @@ from token_fusion import TokenFusion
 fusion = TokenFusion()
 
 
-def build_glyph_if_needed(token: str, base_dir: str, adj_count: int = 50) -> dict:
+def build_glyph_if_needed(
+    token: str,
+    base_dir: str | None = None,
+    adj_count: int = 50,
+) -> dict:
     """
     Create a glyph representation for a token if it does not already exist.
 
@@ -26,8 +33,9 @@ def build_glyph_if_needed(token: str, base_dir: str, adj_count: int = 50) -> dic
     ----------
     token : str
         The token for which a glyph is being created.
-    base_dir : str
-        Directory where glyph JSON files are stored.
+    base_dir : str | None
+        Directory where glyph JSON files are stored.  If ``None`` the
+        location defined in :mod:`config` will be used.
     adj_count : int
         Number of adjacents to request when generating adjacency context.
 
@@ -36,10 +44,30 @@ def build_glyph_if_needed(token: str, base_dir: str, adj_count: int = 50) -> dic
     dict
         The created glyph object.
     """
+    if base_dir is None:
+        base_dir = config.GLYPH_OUTPUT_DIR
     print(f"[GlyphBuilder] Building glyph for unknown token: '{token}'")
     now = datetime.utcnow().isoformat() + "Z"
     token_id = fusion.fuse_token(token)
     path = os.path.join(base_dir, f"{token_id}.json")
+    manifest_path = os.path.join(base_dir, "manifest.json")
+
+    # Determine if we already built this glyph
+    token_hash = hashlib.sha256(token.encode()).hexdigest()
+    manifest: dict[str, str] = {}
+    if os.path.exists(manifest_path):
+        try:
+            with open(manifest_path, "r", encoding="utf-8") as f:
+                manifest = json.load(f)
+        except Exception:
+            manifest = {}
+
+    if os.path.exists(path) and manifest.get(token_id) == token_hash:
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            pass
 
     # Step 1: Generate adjacents first (required for glyph decision)
     try:
@@ -81,11 +109,14 @@ def build_glyph_if_needed(token: str, base_dir: str, adj_count: int = 50) -> dic
         "self_notes": [f"Auto-generated from token '{token}' on {now}."]
     }
 
-    # Save glyph object
+    # Save glyph object and update manifest
     try:
         os.makedirs(os.path.dirname(path), exist_ok=True)
-        with open(path, 'w', encoding='utf-8') as f:
+        with open(path, "w", encoding="utf-8") as f:
             json.dump(glyph, f, indent=2)
+        manifest[token_id] = token_hash
+        with open(manifest_path, "w", encoding="utf-8") as f:
+            json.dump(manifest, f, indent=2)
     except Exception as e:
         print(f"[GlyphBuilder] Error saving glyph to '{path}': {e}")
 

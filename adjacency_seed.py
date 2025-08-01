@@ -2,6 +2,8 @@ import os
 import json
 import random
 
+import config
+
 # Attempt to import the OpenAI client. If unavailable the module will operate
 # in offline mode using a cached adjacency dataset. This allows the
 # repository to function without network access or API keys.
@@ -13,7 +15,9 @@ except Exception:
 
 # Load offline adjacency data if available. Developers can augment this
 # dictionary to provide meaningful adjacents without requiring an API.
-OFFLINE_PATH = os.path.join(os.path.dirname(__file__), "offline_adjacency.json")
+OFFLINE_PATH = os.path.join(
+    config.ADJACENCY_SAMPLE_DIR, config.OFFLINE_LOOKUP_FILE
+)
 _OFFLINE_DATA: dict[str, list[str]] = {}
 if os.path.exists(OFFLINE_PATH):
     try:
@@ -80,6 +84,8 @@ def generate_adjacents(token: str, top_k: int = 5) -> list[dict]:
             return _format_adjacents(candidates[:top_k])
         except Exception as e:
             print(f"[AdjacencySeed] Error generating adjacents for '{token}': {e}")
+            if token in _OFFLINE_DATA:
+                return _format_adjacents(_OFFLINE_DATA[token][:top_k], source="offline")
     # Deterministic fallback: use simple transformations of the token
     # to create plausible adjacents (e.g. token prefixed/suffixed, reversed).
     variations = [

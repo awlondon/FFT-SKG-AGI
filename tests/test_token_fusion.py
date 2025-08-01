@@ -15,8 +15,8 @@ class TestTokenFusion(unittest.TestCase):
         self.assertEqual(tid_text, tid_speech)
 
         with tempfile.TemporaryDirectory() as tmp:
-            glyph1 = build_glyph_if_needed(phrase, tmp, adj_count=1)
-            glyph2 = build_glyph_if_needed(phrase, tmp, adj_count=1)
+            glyph1 = build_glyph_if_needed(phrase, base_dir=tmp, adj_count=1)
+            glyph2 = build_glyph_if_needed(phrase, base_dir=tmp, adj_count=1)
             path = os.path.join(tmp, f"{tid_text}.json")
             self.assertTrue(os.path.exists(path))
             with open(path, "r", encoding="utf-8") as f:
