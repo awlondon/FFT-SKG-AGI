@@ -1,11 +1,8 @@
-numpy
+pillow
 matplotlib
-scipy
-Pillow
-pyttsx3
-networkx
+numpy
 speechrecognition
-requests
+pyttsx3
 openai
 opencv-python
 pyaudio
