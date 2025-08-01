@@ -27,7 +27,7 @@ for directory in required_dirs:
     os.makedirs(directory, exist_ok=True)
 
 # Constants for memory storage
-data_path = "./glyph_memory"
+data_path = config.GLYPH_OUTPUT_DIR
 os.makedirs(data_path, exist_ok=True)
 
 
@@ -38,7 +38,7 @@ def load_or_create_glyph(token: str) -> dict:
         with open(glyph_path, 'r', encoding='utf-8') as f:
             return json.load(f)
     else:
-        glyph = build_glyph_if_needed(token, data_path, adj_count=50)
+        glyph = build_glyph_if_needed(token, adj_count=50)
         return glyph
 
 

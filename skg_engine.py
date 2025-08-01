@@ -7,10 +7,12 @@ from datetime import datetime
 from typing import Optional, List, Any
 
 from engine_comm import write_message, subscribe_to_stream
+import config
 
 from superknowledge_graph import SuperKnowledgeGraph
 from agency_gate import process_agency_gates
 from skg_thought_tracker import SKGThoughtTracker
+from glyph_builder import build_glyph_if_needed
 try:
     from tts_engine import speak
 except Exception:
@@ -81,6 +83,9 @@ class SKGEngine:
         # Load glyph pool and persisted state
         self._load_glyph_pool(self.glyph_list_path)
         self._load_state()
+
+        from glyph_decision_engine import AGIDecision
+        self.glyph_decider = AGIDecision(self.glyph_pool)
 
         # Setup logging paths
         self.log_dir = os.path.join(self.memory_path, "logs")
@@ -257,8 +262,7 @@ class SKGEngine:
         """
         if not self.glyph_pool:
             return "□"
-        idx = self._deterministic_index(token)
-        return self.glyph_pool[idx]
+        return self.glyph_decider.choose(token, adjacency)
 
     def update_adjacency_map(self, token: str, adjacencies: list) -> None:
         """Merge a list of adjacency tokens into the internal adjacency map."""
@@ -373,6 +377,8 @@ class SKGEngine:
 
     def add_glyph_to_pool(self, glyph: str) -> None:
         self.glyph_pool.append(glyph)
+        if hasattr(self, "glyph_decider"):
+            self.glyph_decider.glyph_pool = self.glyph_pool
 
     def traverse_superknowledge(self, start_token: str, steps: int = 5) -> list:
         return self.graph.traverse(start_token, max_steps=steps)
@@ -401,3 +407,29 @@ class SKGEngine:
         for idx, adj_token in enumerate(adjacency_tokens):
             field[adj_token] = vertices[idx % sides]
         return field
+
+    def process_token(self, token: str) -> dict:
+        """High level pipeline for CLI use."""
+        glyph = build_glyph_if_needed(token)
+        self.update_adjacency_map(token, glyph.get("adjacents", []))
+        result = self.assign_glyph_to_token(token, glyph.get("adjacents", []))
+        fft_image = glyph.get("modalities", {}).get("visual", {}).get("fft_visual")
+        info = {
+            "token": token,
+            "glyph": result.get("glyph_id"),
+            "fft_image": fft_image,
+        }
+        log_dir = os.path.join(self.memory_path, config.LOG_DIR)
+        os.makedirs(log_dir, exist_ok=True)
+        log_path = os.path.join(log_dir, config.SYMBOLIC_STREAM_LOG)
+        entry = {
+            "timestamp": datetime.utcnow().isoformat() + "Z",
+            "token": token,
+            "glyph": result.get("glyph_id"),
+            "decision": "externalized",
+            "fft_image": os.path.basename(fft_image) if fft_image else None,
+        }
+        with open(log_path, "a", encoding="utf-8") as f:
+            f.write(json.dumps(entry) + "\n")
+        print(info)
+        return info
