@@ -1,12 +1,23 @@
 import os
 import json
+import pickle
 import random
 from datetime import datetime
-from typing import Optional, List
+from typing import Optional, List, Any
+
+from engine_comm import write_message, subscribe_to_stream
 
 from superknowledge_graph import SuperKnowledgeGraph
 from agency_gate import process_agency_gates
 from skg_thought_tracker import SKGThoughtTracker
+try:
+    from tts_engine import speak
+except Exception:
+    speak = None  # type: ignore
+try:
+    from gesture_engine import display_gesture
+except Exception:
+    display_gesture = None  # type: ignore
 
 
 class SKGEngine:
@@ -25,11 +36,27 @@ class SKGEngine:
         Optional path to a JSON file containing a list of unicode glyphs to
         select from.  If omitted or invalid a default pool containing a
         single placeholder glyph ("□") is used.
+    comm_enabled : bool, optional
+        If True the engine will broadcast externalized tokens to a stream file
+        and process tokens received from subscribed engines.
     """
 
-    def __init__(self, memory_path: str, glyph_path: Optional[str] = "glossary/extended_glyph_pool.json"):
+    def __init__(
+        self,
+        memory_path: str,
+        glyph_path: Optional[str] = "glossary/extended_glyph_pool.json",
+        *,
+        binary: bool = False,
+        encrypt_key: Optional[bytes] = None,
+        comm_enabled: bool = False,
+    ):
+        self.comm_enabled = comm_enabled
+        self.comm_out_file = os.path.join(memory_path, "engine_stream.jsonl")
+        self._subscriptions: list = []
         self.memory_path = memory_path
         self.glyph_list_path = glyph_path
+        self.binary = binary
+        self.encrypt_key = encrypt_key
         self.token_map: dict[str, dict] = {}
         self.adjacency_map: dict[str, dict[str, int]] = {}
         self.glyph_pool: List[str] = []
@@ -37,6 +64,11 @@ class SKGEngine:
         self.thought_tracker = SKGThoughtTracker()
         self.thought_history: List[str] = []
         self.externalized_last: bool = False
+        self.last_modality: str = "speak"
+        # Runtime toggle flags controlled via the GUI
+        self.speech_enabled: bool = True
+        self.gesture_enabled: bool = True
+        self.recursion_enabled: bool = True
 
         # Load glyph pool and persisted state
         self._load_glyph_pool(self.glyph_list_path)
@@ -48,10 +80,32 @@ class SKGEngine:
         self.adj_log = os.path.join(self.log_dir, "adjacency_walk.log")
         self.weight_log = os.path.join(self.log_dir, "weight_updates.log")
 
+    def enable_communication(self, enabled: bool = True) -> None:
+        """Toggle engine-to-engine communication."""
+        self.comm_enabled = enabled
+
+    def subscribe_to_engine(self, stream_path: str) -> None:
+        """Subscribe to another engine's output stream."""
+        if not self.comm_enabled:
+            return
+        t = subscribe_to_stream(stream_path, lambda tok: self.recursive_thought_loop(tok))
+        self._subscriptions.append(t)
+
     def _log(self, log_path: str, entry: dict) -> None:
         """Append a JSON log entry to the specified file."""
         with open(log_path, "a", encoding="utf-8") as f:
             f.write(json.dumps(entry) + "\n")
+
+    def _encrypt(self, data: bytes) -> bytes:
+        """XOR encrypt data with the configured key."""
+        if not self.encrypt_key:
+            return data
+        key = self.encrypt_key
+        return bytes(b ^ key[i % len(key)] for i, b in enumerate(data))
+
+    def _decrypt(self, data: bytes) -> bytes:
+        """XOR decrypt data with the configured key."""
+        return self._encrypt(data)
 
     def _load_glyph_pool(self, path: Optional[str]) -> None:
         """Load the list of available glyphs from a JSON file."""
@@ -71,34 +125,74 @@ class SKGEngine:
 
     def _load_state(self) -> None:
         """Load token and adjacency maps from persistent storage if they exist."""
-        token_path = os.path.join(self.memory_path, "token_map.json")
-        adj_path = os.path.join(self.memory_path, "adjacency_map.json")
+        ext = "pkl" if self.binary else "json"
+        token_path = os.path.join(self.memory_path, f"token_map.{ext}")
+        adj_path = os.path.join(self.memory_path, f"adjacency_map.{ext}")
         if os.path.exists(token_path):
             try:
-                with open(token_path, "r", encoding="utf-8") as f:
-                    self.token_map = json.load(f)
+                mode = "rb" if self.binary or self.encrypt_key else "r"
+                with open(token_path, mode) as f:
+                    data = f.read()
+                if mode == "rb":
+                    data = self._decrypt(data)
+                    if self.binary:
+                        self.token_map = pickle.loads(data)
+                    else:
+                        self.token_map = json.loads(data.decode("utf-8"))
+                else:
+                    self.token_map = json.loads(data)
             except Exception:
                 self.token_map = {}
         if os.path.exists(adj_path):
             try:
-                with open(adj_path, "r", encoding="utf-8") as f:
-                    self.adjacency_map = json.load(f)
+                mode = "rb" if self.binary or self.encrypt_key else "r"
+                with open(adj_path, mode) as f:
+                    data = f.read()
+                if mode == "rb":
+                    data = self._decrypt(data)
+                    if self.binary:
+                        self.adjacency_map = pickle.loads(data)
+                    else:
+                        self.adjacency_map = json.loads(data.decode("utf-8"))
+                else:
+                    self.adjacency_map = json.loads(data)
             except Exception:
                 self.adjacency_map = {}
 
     def save_state(self) -> None:
         """Persist token and adjacency maps to disk."""
         os.makedirs(self.memory_path, exist_ok=True)
-        token_path = os.path.join(self.memory_path, "token_map.json")
-        adj_path = os.path.join(self.memory_path, "adjacency_map.json")
+        ext = "pkl" if self.binary else "json"
+        token_path = os.path.join(self.memory_path, f"token_map.{ext}")
+        adj_path = os.path.join(self.memory_path, f"adjacency_map.{ext}")
+        mode = "wb" if self.binary or self.encrypt_key else "w"
         try:
-            with open(token_path, "w", encoding="utf-8") as f:
-                json.dump(self.token_map, f, indent=2)
+            data: Any
+            if self.binary:
+                data = pickle.dumps(self.token_map)
+            else:
+                json_str = json.dumps(self.token_map, indent=2)
+                data = json_str.encode("utf-8") if mode == "wb" else json_str
+            if mode == "wb":
+                with open(token_path, mode) as f:
+                    f.write(self._encrypt(data))
+            else:
+                with open(token_path, mode, encoding="utf-8") as f:
+                    f.write(data)
         except Exception:
             pass
         try:
-            with open(adj_path, "w", encoding="utf-8") as f:
-                json.dump(self.adjacency_map, f, indent=2)
+            if self.binary:
+                data = pickle.dumps(self.adjacency_map)
+            else:
+                json_str = json.dumps(self.adjacency_map, indent=2)
+                data = json_str.encode("utf-8") if mode == "wb" else json_str
+            if mode == "wb":
+                with open(adj_path, mode) as f:
+                    f.write(self._encrypt(data))
+            else:
+                with open(adj_path, mode, encoding="utf-8") as f:
+                    f.write(data)
         except Exception:
             pass
 
@@ -194,9 +288,9 @@ class SKGEngine:
         if len(self.thought_history) > 20:
             self.thought_history = self.thought_history[-20:]
 
-        gate = self.evaluate_agency_gate(token)
+        gate, modality, _ = self.evaluate_agency_gate(token)
         if gate == "externalize":
-            self.externalize_token(token)
+            self.externalize_token(token, modality)
             self.thought_tracker.log_thought_loop(token, depth, [current_glyph], True)
             self.thought_tracker.reset()
             return [current_glyph]
@@ -210,7 +304,7 @@ class SKGEngine:
             result.extend(self.recursive_thought_loop(adj_token, depth + 1, max_depth, parent=token))
         return result
 
-    def evaluate_agency_gate(self, token: str) -> str:
+    def evaluate_agency_gate(self, token: str) -> tuple[str, str, float]:
         """
         Determine which agency gate should fire for the given token.  A simple
         heuristic is used: tokens with low weight and few adjacencies tend to
@@ -223,26 +317,42 @@ class SKGEngine:
         adj_count = len(self.adjacency_map.get(token, {}))
         token_data = {"frequency": weight, "weight": weight}
         decisions = process_agency_gates(token, token_data, adj_count)
+
+        def get_field(decision: Any, name: str) -> Any:
+            if isinstance(decision, AgencyGateDecision):
+                return getattr(decision, name)
+            if isinstance(decision, dict):
+                return decision.get(name)
+            return None
+
+        modality_decision = next((d for d in decisions if get_field(d, "gate") == "expression"), {"decision": "speak", "confidence": 0.5})
         # Determine a preferred gate based on simple heuristics
         if weight <= 1 and adj_count <= 0:
-            return "explore"
+            return "explore", get_field(modality_decision, "decision"), get_field(modality_decision, "confidence") or 0.5
         if weight <= 2 and adj_count <= 2:
-            return "reevaluate"
+            return "reevaluate", get_field(modality_decision, "decision"), get_field(modality_decision, "confidence") or 0.5
         if weight >= 3:
-            return "externalize"
+            return "externalize", get_field(modality_decision, "decision"), get_field(modality_decision, "confidence") or 0.5
         # Otherwise pick the first affirmative decision or fall back to random
         for d in decisions:
-            if d["decision"] == "YES":
-                return d["gate"]
-        return random.choice([d["gate"] for d in decisions])
+            if get_field(d, "decision") == "YES":
+                return get_field(d, "gate"), get_field(modality_decision, "decision"), get_field(modality_decision, "confidence") or 0.5
+        return random.choice([get_field(d, "gate") for d in decisions]), get_field(modality_decision, "decision"), get_field(modality_decision, "confidence") or 0.5
 
-    def externalize_token(self, token: str) -> None:
-        """Output a token's glyph and weight to the console."""
+    def externalize_token(self, token: str, modality: str = "speak") -> None:
+        """Output a token's glyph using speech or gesture."""
         glyph = self.token_map.get(token)
         display = glyph.get("glyph_id", glyph) if isinstance(glyph, dict) else glyph
         weight = glyph.get("modalities", {}).get("text", {}).get("weight") if isinstance(glyph, dict) else None
-        print(f"[SKGEngine] Externalizing '{token}' → '{display}' (weight: {weight if weight is not None else 'N/A'})")
+        print(f"[SKGEngine] Externalizing '{token}' → '{display}' (weight: {weight if weight is not None else 'N/A'}, modality: {modality})")
+        if modality == "speak" and speak and self.speech_enabled:
+            speak(token)
+        elif modality == "gesture" and display_gesture and self.gesture_enabled:
+            display_gesture(token)
         self.externalized_last = True
+        self.last_modality = modality
+        if self.comm_enabled:
+            write_message(self.comm_out_file, token, display)
 
     def add_glyph_to_pool(self, glyph: str) -> None:
         self.glyph_pool.append(glyph)

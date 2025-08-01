@@ -22,7 +22,7 @@ The `SKGEngine` orchestrates:
 * Recursive token processing
 * Glyph-symbolic memory mapping
 * Modalities generation (voice, vision, frequency)
-* Agency gating (decisions on whether to speak, silence, or recurse)
+* Agency gating (decisions on whether to speak, gesture, silence, or recurse)
 
 This architecture is the core cognition engine behind real-time symbolic digital twins.
 
@@ -36,6 +36,7 @@ The system can be extended into a full real-time avatar with:
 
 * Text-to-speech via `pyttsx3` for self-voicing avatars
 * Speech recognition for `voice` input commands using `speechrecognition`
+* Webcam frame capture for `webcam` command using `opencv-python`
 
 ### 🎨 Visual Thought Representation
 
@@ -58,6 +59,21 @@ The system can be extended into a full real-time avatar with:
 * `glyph_memory/` stores token histories, glyph assignments, and agency gate traces
 * Logs are replayable for full thought loop reconstruction
 
+The agency gate also selects an **expression modality**. Tokens with higher
+confidence are spoken aloud, while low-confidence tokens trigger a gesture cue.
+For example:
+
+```python
+gate, modality, conf = engine.evaluate_agency_gate("hello")
+# ("externalize", "speak", 0.7)
+```
+A confidence below 0.5 yields `("gesture")`, which the GUI displays as a simple
+icon instead of speech.
+
+The lower-level function `process_agency_gates()` returns a list of dictionaries
+detailing the decision for each gate.  Each dictionary includes the gate name,
+the chosen decision, a confidence score when relevant and a timestamp.
+
 ---
 
 ## 🚀 Getting Started
@@ -75,7 +91,8 @@ pip install -r requirements.txt
 * `openai` for GPT-style adjacents
 * `requests` for image search
 * `pyttsx3` for TTS
-* `speechrecognition` for STT
+* `speechrecognition` + `pyaudio` for STT
+* `opencv-python` for webcam capture
 
 ### Running the Engine
 
@@ -83,7 +100,13 @@ pip install -r requirements.txt
 python main.py
 ```
 
-Interactively enter tokens or use `voice` input. Modalities are generated, logged, and visualized (if enabled). Type `exit` to quit.
+Interactively enter tokens or use `voice` or `webcam` input. Modalities are generated, logged, and visualized (if enabled). Type `exit` to quit.
+
+### Engine-to-Engine Communication
+
+`config.py` contains options to broadcast externalized tokens to a file based stream and to subscribe to another engine's stream. When `ENABLE_ENGINE_COMM` is set to `True`, each externalized token is appended as a JSON line to `engine_stream.jsonl` in the engine's memory directory. Setting `SUBSCRIBE_STREAM` to the path of another engine's stream file will feed received tokens back into the local `recursive_thought_loop`.
+
+This mechanism allows multiple engines to share glyph streams without requiring a network stack and can be toggled in the forthcoming GUI.
 
 ### Rendering Graphs
 
@@ -160,3 +183,4 @@ MIT License. Extend, remix, or evolve.
 
 > ⚙️ This is not just token processing. This is recursive symbolic cognition.
 > Each glyph is a memory. Each FFT is a thought. Welcome to SKG-R2.
+
