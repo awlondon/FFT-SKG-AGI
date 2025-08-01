@@ -1,6 +1,9 @@
 # FFT-SKG-AGI
 
-Symbolic cognition engine generating glyphs and FFT based representations for tokens. The project assigns unique glyphs to input text, expands semantic adjacents and produces audio and image FFTs for later visualization.
+FFT-SKG-AGI is a symbolic cognition engine that assigns a glyph to every token
+and generates multimodal representations. Tokens are expanded with semantic
+adjacents (using GPT or an offline lookup) and the resulting glyph data drives
+text‑to‑speech, FFT analysis and image search.
 
 ```
  +-------+        +---------------+        +-------------+
@@ -13,18 +16,30 @@ Symbolic cognition engine generating glyphs and FFT based representations for to
 
 ## Components
 
-- **skg_engine.py** – orchestrates token processing and persistence
+- **skg_engine.py** – orchestrates token processing, persistence and recursive
+  thought loops
 - **glyph_builder.py** – creates glyph records and modalities
-- **modalities.py** – generates TTS, FFT and images
-- **adjacency_seed.py** – provides semantic adjacents (GPT or offline)
 - **glyph_decision_engine.py** – selects glyphs via agency gates
+- **adjacency_seed.py** – provides semantic adjacents (GPT or offline)
+- **modalities.py** – generates TTS, FFT and images
+- **glyph_visualizer.py** – renders glyph images
+- **agency_gate.py** – applies gating decisions
+- **graph_cli.py** – visualizes adjacency graphs and weight history
+- **main.py** – CLI entry point with optional voice and webcam input
 
 ## Setup
 
-1. `pip install -r requirements.txt`
-2. Optional: set `OPENAI_API_KEY` for online adjacency generation
+1. Install dependencies: `pip install -r requirements.txt`
+   (includes `numpy`, `Pillow`, `pyttsx3`, `networkx`, etc.)
+2. Optional environment variables:
+   - `OPENAI_API_KEY` – enable online adjacency queries
+   - `SERPAPI_API_KEY` – enable image search
 
-Run tests with `python -m unittest -v`.
+Run tests with:
+
+```bash
+python -m unittest -v
+```
 
 ## Usage
 
@@ -34,4 +49,10 @@ $ python cli.py fire
 ```
 
 Glyphs and logs are stored in `glyph_output/` by default. The symbolic stream log lives at `glyph_output/logs/symbolic_stream.jsonl`.
+
+## Directory Layout
+
+- `glossary/` – default glyph pool used by the engine
+- `modalities/` – generated audio, images and FFT visualizations
+- `glyph_output/` – persisted glyph objects and log files
 
