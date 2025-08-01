@@ -1,9 +1,6 @@
 import unittest
-import tempfile
-from unittest.mock import patch
+from agency_gate import process_agency_gates
 
-from agency_gate import process_agency_gates, AgencyGateDecision
-from skg_engine import SKGEngine
 
 class TestAgencyGate(unittest.TestCase):
     def test_decision_structure(self):

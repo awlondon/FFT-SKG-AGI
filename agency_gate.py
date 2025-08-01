@@ -1,13 +1,13 @@
-from dataclasses import dataclass
+"""Agency gate decision logic.
+
+This module evaluates a set of symbolic "gates" that determine how a token
+should be handled by the engine.  Each call to :func:`process_agency_gates`
+returns a list of dictionaries containing the gate name, decision and
+confidence.  This dictionary structure is the single supported return type.
+"""
+
 from datetime import datetime
 import random
-
-
-@dataclass
-class AgencyGateDecision:
-    gate: str
-    decision: str
-    confidence: float
 
 # Gate decision logic
 def process_agency_gates(token: str, token_data: dict, adjacency_count: int = 0) -> list[dict]:
