@@ -2,6 +2,7 @@ import os
 import json
 import pickle
 import random
+from dataclasses import dataclass
 from datetime import datetime
 from typing import Optional, List, Any
 
@@ -18,6 +19,13 @@ try:
     from gesture_engine import display_gesture
 except Exception:
     display_gesture = None  # type: ignore
+
+
+@dataclass
+class AgencyGateDecision:
+    gate: str
+    decision: str
+    confidence: float = 0.0
 
 
 class SKGEngine:
@@ -316,28 +324,37 @@ class SKGEngine:
         weight = glyph.get("modalities", {}).get("text", {}).get("weight", 1) if isinstance(glyph, dict) else 1
         adj_count = len(self.adjacency_map.get(token, {}))
         token_data = {"frequency": weight, "weight": weight}
-        decisions = process_agency_gates(token, token_data, adj_count)
+        raw_decisions = process_agency_gates(token, token_data, adj_count)
+        decisions: list[AgencyGateDecision] = []
+        for d in raw_decisions:
+            if isinstance(d, AgencyGateDecision):
+                decisions.append(d)
+            elif isinstance(d, dict):
+                decisions.append(
+                    AgencyGateDecision(
+                        d.get("gate", ""),
+                        d.get("decision", ""),
+                        d.get("confidence", 0.0),
+                    )
+                )
 
-        def get_field(decision: Any, name: str) -> Any:
-            if isinstance(decision, AgencyGateDecision):
-                return getattr(decision, name)
-            if isinstance(decision, dict):
-                return decision.get(name)
-            return None
+        modality_decision = next(
+            (d for d in decisions if d.gate == "expression"),
+            AgencyGateDecision("expression", "speak", 0.5),
+        )
 
-        modality_decision = next((d for d in decisions if get_field(d, "gate") == "expression"), {"decision": "speak", "confidence": 0.5})
         # Determine a preferred gate based on simple heuristics
         if weight <= 1 and adj_count <= 0:
-            return "explore", get_field(modality_decision, "decision"), get_field(modality_decision, "confidence") or 0.5
+            return "explore", modality_decision.decision, modality_decision.confidence
         if weight <= 2 and adj_count <= 2:
-            return "reevaluate", get_field(modality_decision, "decision"), get_field(modality_decision, "confidence") or 0.5
+            return "reevaluate", modality_decision.decision, modality_decision.confidence
         if weight >= 3:
-            return "externalize", get_field(modality_decision, "decision"), get_field(modality_decision, "confidence") or 0.5
+            return "externalize", modality_decision.decision, modality_decision.confidence
         # Otherwise pick the first affirmative decision or fall back to random
         for d in decisions:
-            if get_field(d, "decision") == "YES":
-                return get_field(d, "gate"), get_field(modality_decision, "decision"), get_field(modality_decision, "confidence") or 0.5
-        return random.choice([get_field(d, "gate") for d in decisions]), get_field(modality_decision, "decision"), get_field(modality_decision, "confidence") or 0.5
+            if d.decision == "YES":
+                return d.gate, modality_decision.decision, modality_decision.confidence
+        return random.choice([d.gate for d in decisions]), modality_decision.decision, modality_decision.confidence
 
     def externalize_token(self, token: str, modality: str = "speak") -> None:
         """Output a token's glyph using speech or gesture."""
