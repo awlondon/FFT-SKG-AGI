@@ -317,19 +317,27 @@ class SKGEngine:
         adj_count = len(self.adjacency_map.get(token, {}))
         token_data = {"frequency": weight, "weight": weight}
         decisions = process_agency_gates(token, token_data, adj_count)
-        modality_decision = next((d for d in decisions if d["gate"] == "expression"), {"decision": "speak", "confidence": 0.5})
+
+        def get_field(decision: Any, name: str) -> Any:
+            if isinstance(decision, AgencyGateDecision):
+                return getattr(decision, name)
+            if isinstance(decision, dict):
+                return decision.get(name)
+            return None
+
+        modality_decision = next((d for d in decisions if get_field(d, "gate") == "expression"), {"decision": "speak", "confidence": 0.5})
         # Determine a preferred gate based on simple heuristics
         if weight <= 1 and adj_count <= 0:
-            return "explore", modality_decision["decision"], modality_decision.get("confidence", 0.5)
+            return "explore", get_field(modality_decision, "decision"), get_field(modality_decision, "confidence") or 0.5
         if weight <= 2 and adj_count <= 2:
-            return "reevaluate", modality_decision["decision"], modality_decision.get("confidence", 0.5)
+            return "reevaluate", get_field(modality_decision, "decision"), get_field(modality_decision, "confidence") or 0.5
         if weight >= 3:
-            return "externalize", modality_decision["decision"], modality_decision.get("confidence", 0.5)
+            return "externalize", get_field(modality_decision, "decision"), get_field(modality_decision, "confidence") or 0.5
         # Otherwise pick the first affirmative decision or fall back to random
         for d in decisions:
-            if d["decision"] == "YES":
-                return d["gate"], modality_decision["decision"], modality_decision.get("confidence", 0.5)
-        return random.choice([d["gate"] for d in decisions]), modality_decision["decision"], modality_decision.get("confidence", 0.5)
+            if get_field(d, "decision") == "YES":
+                return get_field(d, "gate"), get_field(modality_decision, "decision"), get_field(modality_decision, "confidence") or 0.5
+        return random.choice([get_field(d, "gate") for d in decisions]), get_field(modality_decision, "decision"), get_field(modality_decision, "confidence") or 0.5
 
     def externalize_token(self, token: str, modality: str = "speak") -> None:
         """Output a token's glyph using speech or gesture."""
