@@ -4,9 +4,12 @@ from datetime import datetime
 from adjacency_seed import generate_adjacents
 from modalities import generate_modalities
 from glyph_decision_engine import choose_glyph_for_token
+from token_fusion import TokenFusion
+
+fusion = TokenFusion()
 
 
-def build_glyph_if_needed(token: str, path: str, adj_count: int = 50) -> dict:
+def build_glyph_if_needed(token: str, base_dir: str, adj_count: int = 50) -> dict:
     """
     Create a glyph representation for a token if it does not already exist.
 
@@ -23,8 +26,8 @@ def build_glyph_if_needed(token: str, path: str, adj_count: int = 50) -> dict:
     ----------
     token : str
         The token for which a glyph is being created.
-    path : str
-        The file path under which to persist the resulting glyph JSON.
+    base_dir : str
+        Directory where glyph JSON files are stored.
     adj_count : int
         Number of adjacents to request when generating adjacency context.
 
@@ -35,6 +38,8 @@ def build_glyph_if_needed(token: str, path: str, adj_count: int = 50) -> dict:
     """
     print(f"[GlyphBuilder] Building glyph for unknown token: '{token}'")
     now = datetime.utcnow().isoformat() + "Z"
+    token_id = fusion.fuse_token(token)
+    path = os.path.join(base_dir, f"{token_id}.json")
 
     # Step 1: Generate adjacents first (required for glyph decision)
     try:
@@ -52,7 +57,7 @@ def build_glyph_if_needed(token: str, path: str, adj_count: int = 50) -> dict:
 
     # Step 3: Generate modalities (FFT, TTS, image, etc.)
     try:
-        modalities = generate_modalities(token, glyph_id)
+        modalities = generate_modalities(token, glyph_id, token_id)
     except Exception as e:
         print(f"[GlyphBuilder] Error generating modalities for '{token}': {e}")
         # Provide a minimal modalities structure

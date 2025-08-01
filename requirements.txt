@@ -7,3 +7,5 @@ networkx
 speechrecognition
 requests
 openai
+opencv-python
+pyaudio

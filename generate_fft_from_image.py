@@ -16,7 +16,10 @@ def generate_fft_from_image(image_path: str, output_dir: str = "modalities/fft_v
         return None
     try:
         img = Image.open(image_path).convert("L")
-        img = img.resize((max_dim, max_dim), Image.ANTIALIAS)
+        width, height = img.size
+        scale = min(max_dim / width, max_dim / height)
+        new_width, new_height = int(width * scale), int(height * scale)
+        img = img.resize((new_width, new_height), Image.Resampling.LANCZOS)
         arr = np.array(img)
         fft = np.fft.fftshift(np.fft.fft2(arr))
         magnitude = np.abs(fft)
