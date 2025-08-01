@@ -15,7 +15,7 @@ from tts_engine import speak
 from stt_engine import transcribe_speech
 from video_capture import capture_frame
 from glyph_visualizer import generate_glyph_image
-from avatar_gui import AvatarGUI
+from skg_gui import SKGGUI
 
 # Setup required directories on program start
 required_dirs = [
@@ -53,8 +53,14 @@ def save_glyph(glyph: dict) -> None:
         print(f"[Main] Error saving glyph for '{glyph['token']}': {e}")
 
 
-def process_input(user_input: str, skg: SKGEngine, gui: AvatarGUI  | None = None) -> None:
+def process_input(user_input: str, skg: SKGEngine, gui: SKGGUI | None = None) -> None:
     token = user_input.lower()
+    if gui:
+        gui.append_message(f"Input: {token}")
+        gui.append_message(
+            f"Toggles - speech={skg.speech_enabled}, gesture={skg.gesture_enabled}, recursion={skg.recursion_enabled}"
+        )
+
     glyph_data = load_or_create_glyph(token)
     # Add glyph id to pool if not already present
     glyph_id = glyph_data.get("glyph_id")
@@ -69,16 +75,25 @@ def process_input(user_input: str, skg: SKGEngine, gui: AvatarGUI  | None = None
     if skg.recursion_enabled:
         skg.recursive_thought_loop(token)
     save_glyph(glyph_data)
+
     # Top adjacents report
     top_three = sorted(
         skg.get_adjacencies_for_token(token).items(),
         key=lambda x: x[1],
-        reverse=True
+        reverse=True,
     )[:3]
     print("[Top Adjacents]", top_three)
-        if top_three and skg.speech_enabled:
-            speak(" ".join(t for t, _ in top_three))
-        # Optional console clear after externalization
+    if gui:
+        gui.append_message(
+            "Top adjacents: " + ", ".join(t for t, _ in top_three)
+        )
+    if top_three and skg.speech_enabled:
+        speech_text = " ".join(t for t, _ in top_three)
+        speak(speech_text)
+        if gui:
+            gui.append_message(f"Spoke: {speech_text}")
+
+    # Optional console clear after externalization
     if hasattr(skg, "externalized_last") and skg.externalized_last:
         os.system("cls" if os.name == "nt" else "clear")
         print("[Main] Recent thought loop:")
@@ -90,7 +105,7 @@ def process_input(user_input: str, skg: SKGEngine, gui: AvatarGUI  | None = None
         gui.update_from_token(glyph_data)
 
 
-def voice_listener_loop(skg: SKGEngine, gui: AvatarGUI | None) -> None:
+def voice_listener_loop(skg: SKGEngine, gui: SKGGUI | None) -> None:
     """Continuously listen on the microphone and process any recognized speech."""
     while True:
         spoken, _ = transcribe_speech()
@@ -100,10 +115,12 @@ def voice_listener_loop(skg: SKGEngine, gui: AvatarGUI | None) -> None:
         time.sleep(0.5)
 
 
-def webcam_listener_loop(skg: SKGEngine, gui: AvatarGUI | None) -> None:
+def webcam_listener_loop(skg: SKGEngine, gui: SKGGUI | None) -> None:
     """Continuously capture webcam frames and process the derived token."""
     while True:
         token, image_path = capture_frame()
+        if image_path and gui:
+            gui.update_video(image_path)
         if token:
             print(f"[Webcam] Token {token} from {image_path}")
             skg.assign_glyph_to_token(token)
@@ -129,7 +146,7 @@ def main() -> None:
                     skg.add_glyph_to_pool(g)
         except Exception:
             pass
-    gui = AvatarGUI(skg) if not args.no_gui else None
+    gui = SKGGUI(skg) if not args.no_gui else None
 
     def engine_loop() -> None:
         threading.Thread(target=voice_listener_loop, args=(skg, gui), daemon=True).start()

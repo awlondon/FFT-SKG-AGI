@@ -17,28 +17,47 @@ class SKGGUI:
         self.update_queue: queue.Queue = queue.Queue()
         self.images: dict[str, ImageTk.PhotoImage] = {}
 
-        # Avatar / glyph visual
-        self.avatar_label = tk.Label(self.root, text="Glyph", width=256, height=256)
+        # Layout frames for four panels
+        self.video_frame = tk.Frame(self.root)
+        self.video_frame.grid(row=0, column=0, padx=5, pady=5)
+
+        self.console_frame = tk.Frame(self.root)
+        self.console_frame.grid(row=0, column=1, padx=5, pady=5)
+
+        self.fft_frame = tk.Frame(self.root)
+        self.fft_frame.grid(row=1, column=0, padx=5, pady=5)
+
+        self.control_frame = tk.Frame(self.root)
+        self.control_frame.grid(row=1, column=1, padx=5, pady=5)
+
+        # Video panel
+        self.video_label = tk.Label(self.video_frame, text="Video", width=256, height=256)
+        self.video_label.pack()
+
+        # Console text output
+        self.console_text = tk.Text(self.console_frame, width=40, height=15)
+        self.console_text.pack()
+
+        # FFT panels inside fft_frame
+        self.avatar_label = tk.Label(self.fft_frame, text="Glyph", width=256, height=256)
         self.avatar_label.grid(row=0, column=0, padx=5, pady=5)
 
-        # FFT panels
-        self.audio_fft_label = tk.Label(self.root, text="Audio FFT", width=256, height=256)
+        self.audio_fft_label = tk.Label(self.fft_frame, text="Audio FFT", width=256, height=256)
         self.audio_fft_label.grid(row=0, column=1, padx=5, pady=5)
 
-        self.image_fft_label = tk.Label(self.root, text="Image FFT", width=256, height=256)
-        self.image_fft_label.grid(row=1, column=1, padx=5, pady=5)
+        self.image_fft_label = tk.Label(self.fft_frame, text="Image FFT", width=256, height=256)
+        self.image_fft_label.grid(row=1, column=0, columnspan=2, padx=5, pady=5)
 
-        # Memory browser
-        self.memory_list = tk.Listbox(self.root, height=15)
-        self.memory_list.grid(row=1, column=0, sticky="ns", padx=5, pady=5)
+        # Memory browser and toggles inside control_frame
+        self.memory_list = tk.Listbox(self.control_frame, height=15)
+        self.memory_list.grid(row=0, column=0, sticky="ns", padx=5, pady=5)
         self.memory_list.bind("<<ListboxSelect>>", self.on_memory_select)
 
-        self.detail_text = tk.Text(self.root, width=40, height=15)
-        self.detail_text.grid(row=1, column=2, padx=5, pady=5)
+        self.toggle_frame = tk.Frame(self.control_frame)
+        self.toggle_frame.grid(row=0, column=1, sticky="n", padx=5, pady=5)
 
-        # Toggle switches
-        self.toggle_frame = tk.Frame(self.root)
-        self.toggle_frame.grid(row=0, column=2, sticky="n", padx=5, pady=5)
+        self.detail_text = tk.Text(self.control_frame, width=40, height=15)
+        self.detail_text.grid(row=1, column=0, columnspan=2, padx=5, pady=5)
 
         self.speech_var = tk.BooleanVar(value=getattr(engine, "speech_enabled", True))
         self.gesture_var = tk.BooleanVar(value=getattr(engine, "gesture_enabled", True))
@@ -109,5 +128,23 @@ class SKGGUI:
         glyph = self.engine.token_map.get(token, {})
         self.detail_text.delete("1.0", tk.END)
         self.detail_text.insert("1.0", json.dumps(glyph, indent=2))
+
+    def update_video(self, path: str) -> None:
+        """Display the latest webcam frame."""
+        if path and os.path.exists(path):
+            try:
+                img = Image.open(path).resize((256, 256))
+                photo = ImageTk.PhotoImage(img)
+                self.video_label.config(image=photo, text="")
+                self.images["video"] = photo
+            except Exception:
+                self.video_label.config(text="(image error)", image="")
+        else:
+            self.video_label.config(text="No image", image="")
+
+    def append_message(self, msg: str) -> None:
+        """Append a message to the console text area."""
+        self.console_text.insert(tk.END, msg + "\n")
+        self.console_text.see(tk.END)
 
 
