@@ -70,6 +70,10 @@ gate, modality, conf = engine.evaluate_agency_gate("hello")
 A confidence below 0.5 yields `("gesture")`, which the GUI displays as a simple
 icon instead of speech.
 
+The lower-level function `process_agency_gates()` returns a list of dictionaries
+detailing the decision for each gate.  Each dictionary includes the gate name,
+the chosen decision, a confidence score when relevant and a timestamp.
+
 ---
 
 ## 🚀 Getting Started

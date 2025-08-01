@@ -1,5 +1,5 @@
 import unittest
-from agency_gate import process_agency_gates, AgencyGateDecision
+from agency_gate import process_agency_gates
 
 class TestAgencyGate(unittest.TestCase):
     def test_decision_structure(self):
