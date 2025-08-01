@@ -2,7 +2,8 @@ pillow
 matplotlib
 numpy
 speechrecognition
-pyttsx3
+pyttsx3==2.90
+tkinter
 openai
 opencv-python
 pyaudio

@@ -3,6 +3,7 @@ import json
 import argparse
 import threading
 import time
+import traceback
 from skg_engine import SKGEngine
 import config
 from glyph_builder import build_glyph_if_needed
@@ -75,9 +76,9 @@ def process_input(user_input: str, skg: SKGEngine, gui: AvatarGUI  | None = None
         reverse=True
     )[:3]
     print("[Top Adjacents]", top_three)
-    if top_three and skg.speech_enabled:
-        speak(" ".join(t for t, _ in top_three))
-    # Optional console clear after externalization
+        if top_three and skg.speech_enabled:
+            speak(" ".join(t for t, _ in top_three))
+        # Optional console clear after externalization
     if hasattr(skg, "externalized_last") and skg.externalized_last:
         os.system("cls" if os.name == "nt" else "clear")
         print("[Main] Recent thought loop:")
@@ -128,34 +129,42 @@ def main() -> None:
                     skg.add_glyph_to_pool(g)
         except Exception:
             pass
-    gui = None
-    if not args.no_gui:
-        gui = AvatarGUI(skg)
-        threading.Thread(target=gui.run, daemon=True).start()
+    gui = AvatarGUI(skg) if not args.no_gui else None
 
-    threading.Thread(target=voice_listener_loop, args=(skg, gui), daemon=True).start()
-    threading.Thread(target=webcam_listener_loop, args=(skg, gui), daemon=True).start()
-        
-    print("⚙️  SKG-R2 Engine Initialized. Type 'exit' to quit.")
-    while True:
-        user_input = input("\nEnter token: ").strip()
-        if user_input.lower() == 'exit':
-            break
-        elif user_input.lower() == 'voice':
-            spoken, audio_path = transcribe_speech()
-            if spoken:
-                speak(f"You said {spoken}")
-                process_input(spoken, skg, gui)
-            continue
-        elif user_input.lower() == 'webcam':
-            token, image_path = capture_frame()
-            if token:
-                print(f"[Webcam] Token {token} from {image_path}")
-                skg.assign_glyph_to_token(token)
-                process_input(token, skg, gui)
-            continue
-        process_input(user_input, skg, gui)
+    def engine_loop() -> None:
+        threading.Thread(target=voice_listener_loop, args=(skg, gui), daemon=True).start()
+        threading.Thread(target=webcam_listener_loop, args=(skg, gui), daemon=True).start()
+
+        print("⚙️  SKG-R2 Engine Initialized. Type 'exit' to quit.")
+        while True:
+            user_input = input("\nEnter token: ").strip()
+            if user_input.lower() == 'exit':
+                break
+            elif user_input.lower() == 'voice':
+                spoken, audio_path = transcribe_speech()
+                if spoken:
+                    speak(f"You said {spoken}")
+                    process_input(spoken, skg, gui)
+                continue
+            elif user_input.lower() == 'webcam':
+                token, image_path = capture_frame()
+                if token:
+                    print(f"[Webcam] Token {token} from {image_path}")
+                    skg.assign_glyph_to_token(token)
+                    process_input(token, skg, gui)
+                continue
+            process_input(user_input, skg, gui)
+
+    if gui:
+        threading.Thread(target=engine_loop, daemon=True).start()
+        gui.run()
+    else:
+        engine_loop()
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception as e:
+        print(f"[❌ Error]: {e}")
+        traceback.print_exc()
