@@ -16,13 +16,13 @@ class TestAgencyGate(unittest.TestCase):
             if d['gate'] == 'expression':
                 self.assertIn('confidence', d)
 
-    def test_engine_handles_dataclass_decisions(self):
+    def test_engine_handles_dict_decisions(self):
         with tempfile.TemporaryDirectory() as tmp:
             engine = SKGEngine(tmp)
             engine.token_map['foo'] = {'token': 'foo', 'modalities': {'text': {'weight': 1}}}
             decisions = [
-                AgencyGateDecision('expression', 'gesture', 0.55),
-                AgencyGateDecision('explore', 'YES', 0.8),
+                {'gate': 'expression', 'decision': 'gesture', 'confidence': 0.55},
+                {'gate': 'explore', 'decision': 'YES', 'confidence': 0.8},
             ]
             with patch('skg_engine.process_agency_gates', return_value=decisions):
                 gate, modality, conf = engine.evaluate_agency_gate('foo')

@@ -1,6 +1,16 @@
 import os
 import json
 from typing import List
+import time
+
+
+def wait_for_file(path: str, timeout: float = 3.0) -> None:
+    """Wait until ``path`` exists and is non-empty or raise ``TimeoutError``."""
+    start = time.time()
+    while not os.path.exists(path) or os.path.getsize(path) == 0:
+        if time.time() - start > timeout:
+            raise TimeoutError(f"File not available: {path}")
+        time.sleep(0.1)
 
 # Import optional dependencies within try/except so that missing libraries
 # do not break modality generation.
@@ -53,6 +63,7 @@ def generate_modalities(token: str, glyph_id: str, token_id: str) -> dict:
     if generate_tts:
         try:
             generate_tts(token, audio_path)
+            wait_for_file(audio_path)
             if generate_fft_from_audio:
                 generate_fft_from_audio(audio_path, fft_audio_path, fft_visual_path)
         except Exception as e:

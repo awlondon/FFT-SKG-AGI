@@ -328,37 +328,24 @@ class SKGEngine:
         weight = glyph.get("modalities", {}).get("text", {}).get("weight", 1) if isinstance(glyph, dict) else 1
         adj_count = len(self.adjacency_map.get(token, {}))
         token_data = {"frequency": weight, "weight": weight}
-        raw_decisions = process_agency_gates(token, token_data, adj_count)
-        decisions: list[AgencyGateDecision] = []
-        for d in raw_decisions:
-            if isinstance(d, AgencyGateDecision):
-                decisions.append(d)
-            elif isinstance(d, dict):
-                decisions.append(
-                    AgencyGateDecision(
-                        d.get("gate", ""),
-                        d.get("decision", ""),
-                        d.get("confidence", 0.0),
-                    )
-                )
-
+        decisions: list[dict] = process_agency_gates(token, token_data, adj_count)
         modality_decision = next(
-            (d for d in decisions if d.gate == "expression"),
-            AgencyGateDecision("expression", "speak", 0.5),
+            (d for d in decisions if d.get("gate") == "expression"),
+            {"gate": "expression", "decision": "speak", "confidence": 0.5},
         )
 
         # Determine a preferred gate based on simple heuristics
         if weight <= 1 and adj_count <= 0:
-            return "explore", modality_decision.decision, modality_decision.confidence
+            return "explore", modality_decision.get("decision", "speak"), modality_decision.get("confidence", 0.5)
         if weight <= 2 and adj_count <= 2:
-            return "reevaluate", modality_decision.decision, modality_decision.confidence
+            return "reevaluate", modality_decision.get("decision", "speak"), modality_decision.get("confidence", 0.5)
         if weight >= 3:
-            return "externalize", modality_decision.decision, modality_decision.confidence
+            return "externalize", modality_decision.get("decision", "speak"), modality_decision.get("confidence", 0.5)
         # Otherwise pick the first affirmative decision or fall back to random
         for d in decisions:
-            if d.decision == "YES":
-                return d.gate, modality_decision.decision, modality_decision.confidence
-        return random.choice([d.gate for d in decisions]), modality_decision.decision, modality_decision.confidence
+            if d.get("decision") == "YES":
+                return d.get("gate", "explore"), modality_decision.get("decision", "speak"), modality_decision.get("confidence", 0.5)
+        return random.choice([d.get("gate", "explore") for d in decisions]), modality_decision.get("decision", "speak"), modality_decision.get("confidence", 0.5)
 
     def externalize_token(self, token: str, modality: str = "speak") -> None:
         """Output a token's glyph using speech or gesture."""
